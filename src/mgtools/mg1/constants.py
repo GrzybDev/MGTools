@@ -1,0 +1,1 @@
+RESOURCE_MAGIC = b"\x40\x2c"
