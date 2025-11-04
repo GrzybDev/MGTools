@@ -32,3 +32,5 @@ FILE_TYPE_MAP = {
     70: FileType.SPRITE,
     74: FileType.PALETTE,
 }
+
+LOCALIZABLE_CHUNKS = [41, 62, 69, 70, 74]
