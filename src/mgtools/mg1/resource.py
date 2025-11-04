@@ -1,6 +1,7 @@
 import os
 from io import BufferedReader
 
+from mgtools.file import File
 from mgtools.mg1.chunks.animated_sprite import AnimatedSprite
 from mgtools.mg1.chunks.font import Font
 from mgtools.mg1.chunks.single import Single
@@ -11,6 +12,7 @@ from mgtools.mg1.enumerators.file_type import FileType
 from mgtools.mg1.enumerators.resource_platform import ResourcePlatform
 from mgtools.mg1.formats.palette import Palette
 from mgtools.mg1.formats.sprite import Sprite
+from mgtools.mg1.formats.unknown import Unknown
 from mgtools.mg1.mappings import FILE_TYPE_MAP
 
 
@@ -129,3 +131,14 @@ class Resource:
             raise ValueError(f"File at index {index} is not a sprite.")
 
         return Sprite(self.__files[index])
+
+    def get(self, index: int) -> File:
+        file_type = FILE_TYPE_MAP.get(index, FileType.UNKNOWN)
+
+        match file_type:
+            case FileType.SPRITE:
+                return self.__get_sprite(index)
+            case FileType.PALETTE:
+                return Palette(self.__files[index])
+            case _:
+                return Unknown(self.__files[index])
