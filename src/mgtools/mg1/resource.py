@@ -10,6 +10,7 @@ from mgtools.mg1.constants import RESOURCE_MAGIC
 from mgtools.mg1.enumerators.chunk_type import ChunkType
 from mgtools.mg1.enumerators.file_type import FileType
 from mgtools.mg1.enumerators.resource_platform import ResourcePlatform
+from mgtools.mg1.formats.locale import Locale
 from mgtools.mg1.formats.palette import Palette
 from mgtools.mg1.formats.sprite import Sprite
 from mgtools.mg1.formats.unknown import Unknown
@@ -140,5 +141,7 @@ class Resource:
                 return self.__get_sprite(index)
             case FileType.PALETTE:
                 return Palette(self.__files[index])
+            case FileType.LOCALE:
+                return Locale(self.__files[index])
             case _:
                 return Unknown(self.__files[index])

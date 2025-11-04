@@ -1,4 +1,5 @@
 from mgtools.mg1.constants import (
+    EXPORT_LOCALE_FOLDER,
     EXPORT_PALETTE_EXTENSION,
     EXPORT_PALETTE_FOLDER,
     EXPORT_SPRITE_EXTENSION,
@@ -6,6 +7,7 @@ from mgtools.mg1.constants import (
     EXPORT_UNKNOWN_EXTENSION,
     EXPORT_UNKNOWN_FOLDER,
 )
+from mgtools.mg1.formats.locale import Locale
 from mgtools.mg1.formats.palette import Palette
 from mgtools.mg1.formats.sprite import Sprite
 from mgtools.mg1.mappings import FILE_NAME_MAP
@@ -28,6 +30,10 @@ def export_file(resource, index, output_dir):
         file_path = output_dir / EXPORT_PALETTE_FOLDER
         file_path.mkdir(parents=True, exist_ok=True)
         file.save(file_path / f"{file_name}.{EXPORT_PALETTE_EXTENSION}")
+    elif isinstance(file, Locale):
+        file_path = output_dir / EXPORT_LOCALE_FOLDER
+        file_path.mkdir(parents=True, exist_ok=True)
+        file.save(file_path)
     else:
         file_path = output_dir / EXPORT_UNKNOWN_FOLDER
         file_path.mkdir(parents=True, exist_ok=True)

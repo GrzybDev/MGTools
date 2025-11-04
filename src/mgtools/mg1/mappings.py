@@ -30,6 +30,7 @@ FILE_TYPE_MAP = {
     68: FileType.SPRITE,
     69: FileType.SPRITE,
     70: FileType.SPRITE,
+    72: FileType.LOCALE,
     74: FileType.PALETTE,
 }
 
@@ -41,4 +42,17 @@ FILE_NAME_MAP = {
     74: "palette",
 }
 
-LOCALIZABLE_CHUNKS = [41, 62, 69, 70, 74]
+LOCALIZABLE_CHUNKS = [41, 62, 69, 70, 72, 74]
+TEXT_BLOCKS = [3, 4, 5, 6, 7, 8, 9, 13, 14, 15]
+TEXT_BLOCKS_NAMES = {
+    3: "miscellaneous_1",
+    4: "miscellaneous_2",
+    5: "radio_big_boss_1",
+    6: "radio_big_boss_2",
+    7: "radio_resistance_leader",
+    8: "radio_steve_diane",
+    9: "radio_jennifer",
+    13: "opening",
+    14: "ending",
+    15: "frontend",
+}
