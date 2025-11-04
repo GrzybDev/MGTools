@@ -1,6 +1,8 @@
 import os
 import struct
+import xml.etree.ElementTree as ET
 from io import BytesIO
+from pathlib import Path
 
 from mgtools.mg1.chunks.single import Single
 
@@ -37,3 +39,23 @@ class Palette:
                 self.__colors.append((b, g, r))
             except struct.error:
                 break
+
+    def save(self, path: Path) -> None:
+        # Save palette as a XML file
+        root = ET.Element("Palette")
+
+        for index, (r, g, b) in enumerate(self.__colors):
+            color_element = ET.SubElement(
+                root,
+                "Color",
+                attrib={
+                    "index": str(index),
+                    "r": str(r),
+                    "g": str(g),
+                    "b": str(b),
+                },
+            )
+
+        tree = ET.ElementTree(root)
+        ET.indent(tree, space="  ")
+        tree.write(path, encoding="utf-8", xml_declaration=True)
