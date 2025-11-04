@@ -3,10 +3,10 @@ from io import BufferedReader
 
 import typer
 
-from mgtools.mg1.chunks.animated_sprite import AnimatedSpriteChunk
-from mgtools.mg1.chunks.font import FontChunk
-from mgtools.mg1.chunks.single import SingleChunk
-from mgtools.mg1.chunks.texture import TextureChunk
+from mgtools.mg1.chunks.animated_sprite import AnimatedSprite
+from mgtools.mg1.chunks.font import Font
+from mgtools.mg1.chunks.single import Single
+from mgtools.mg1.chunks.texture import Texture
 from mgtools.mg1.constants import RESOURCE_MAGIC
 from mgtools.mg1.enumerators.chunk_type import ChunkType
 from mgtools.mg1.enumerators.file_type import FileType
@@ -64,28 +64,26 @@ class Resource:
                     texture = self.__read_texture_chunk(reader)
                     self.__files.append(texture)
 
-    def __read_chunk(self, reader: BufferedReader) -> SingleChunk:
+    def __read_chunk(self, reader: BufferedReader) -> Single:
         file_size = int.from_bytes(reader.read(2))
         file_data = reader.read(file_size)
 
-        return SingleChunk(file_data)
+        return Single(file_data)
 
-    def __read_animated_sprite_chunk(
-        self, reader: BufferedReader
-    ) -> AnimatedSpriteChunk:
-        anim = AnimatedSpriteChunk()
+    def __read_animated_sprite_chunk(self, reader: BufferedReader) -> AnimatedSprite:
+        anim = AnimatedSprite()
         frame_count = int.from_bytes(reader.read(2)) // 2
 
         for _ in range(frame_count):
             frame_file_size = int.from_bytes(reader.read(4))
             frame_data = reader.read(frame_file_size)
-            anim.add_frame(SingleChunk(frame_data))
+            anim.add_frame(Single(frame_data))
 
         reader.seek(4, os.SEEK_CUR)  # Skip padding/alignment bytes
         return anim
 
-    def __read_font_chunk(self, reader: BufferedReader) -> FontChunk:
-        font = FontChunk(reader.read(2))
+    def __read_font_chunk(self, reader: BufferedReader) -> Font:
+        font = Font(reader.read(2))
 
         for _ in range(5):  # Figure out where this 5 comes from
             page_size = int.from_bytes(reader.read(4))
@@ -94,9 +92,9 @@ class Resource:
 
         return font
 
-    def __read_texture_chunk(self, reader: BufferedReader) -> TextureChunk:
+    def __read_texture_chunk(self, reader: BufferedReader) -> Texture:
         header_data = reader.read(2)
-        texture = TextureChunk(header_data)
+        texture = Texture(header_data)
 
         for _ in range(2):  # Figure out where this 2 comes from
             texture_size = int.from_bytes(reader.read(4))
@@ -122,7 +120,7 @@ class Resource:
 
         return Palette(palette_files[0])
 
-    def get_sprite(self, index: int) -> Sprite:
+    def __get_sprite(self, index: int) -> Sprite:
         if FILE_TYPE_MAP.get(index) != FileType.SPRITE:
             raise ValueError(f"File at index {index} is not a sprite.")
 

@@ -1,7 +1,9 @@
 from io import BytesIO
 
+from mgtools.chunk import Chunk
 
-class SingleChunk:
+
+class Single(Chunk):
 
     @property
     def data(self) -> BytesIO:

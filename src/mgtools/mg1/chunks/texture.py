@@ -1,4 +1,13 @@
-class TextureChunk:
+from io import BytesIO
+
+from mgtools.chunk import Chunk
+
+
+class Texture(Chunk):
+
+    @property
+    def data(self) -> BytesIO:
+        return BytesIO(b"".join(tex for tex in self.__textures))
 
     def __init__(self, header_data: bytes) -> None:
         self.__header = header_data

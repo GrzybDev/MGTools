@@ -2,7 +2,7 @@ import os
 import struct
 from io import BytesIO
 
-from mgtools.mg1.chunks.single import SingleChunk
+from mgtools.mg1.chunks.single import Single
 
 
 class Palette:
@@ -18,7 +18,7 @@ class Palette:
 
         return color_map
 
-    def __init__(self, chunk: SingleChunk) -> None:
+    def __init__(self, chunk: Single) -> None:
         self.__colors = []
 
         self.__parse_data(chunk.data)

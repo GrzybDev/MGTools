@@ -2,7 +2,7 @@ from io import BytesIO
 
 from PIL import Image
 
-from mgtools.mg1.chunks.single import SingleChunk
+from mgtools.mg1.chunks.single import Single
 from mgtools.mg1.formats.palette import Palette
 
 
@@ -10,7 +10,7 @@ class Sprite:
 
     __header_bytes = b""
 
-    def __init__(self, chunk: SingleChunk):
+    def __init__(self, chunk: Single):
         self.__parse_data(chunk.data)
 
     def __parse_data(self, chunk: BytesIO) -> None:
