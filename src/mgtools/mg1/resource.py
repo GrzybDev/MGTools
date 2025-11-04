@@ -9,7 +9,10 @@ from mgtools.mg1.chunks.single import SingleChunk
 from mgtools.mg1.chunks.texture import TextureChunk
 from mgtools.mg1.constants import RESOURCE_MAGIC
 from mgtools.mg1.enumerators.chunk_type import ChunkType
+from mgtools.mg1.enumerators.file_type import FileType
 from mgtools.mg1.enumerators.resource_platform import ResourcePlatform
+from mgtools.mg1.formats.palette import Palette
+from mgtools.mg1.mappings import FILE_TYPE_MAP
 
 
 class Resource:
@@ -100,3 +103,20 @@ class Resource:
             texture.add_texture(texture_data)
 
         return texture
+
+    def get_palette(self, palette_id: int | None = None) -> Palette:
+        palette_files = [
+            self.__files[i]
+            for i in range(len(self.__files))
+            if FILE_TYPE_MAP.get(i) == FileType.PALETTE
+        ]
+
+        if len(palette_files) == 0:
+            raise ValueError("No palettes found in resource file.")
+
+        if palette_id is not None:
+            if palette_id < 0 or palette_id >= len(palette_files):
+                raise ValueError(f"Palette ID {palette_id} is out of range.")
+            return Palette(palette_files[palette_id])
+
+        return Palette(palette_files[0])
