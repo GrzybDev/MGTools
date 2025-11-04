@@ -12,6 +12,7 @@ from mgtools.mg1.enumerators.chunk_type import ChunkType
 from mgtools.mg1.enumerators.file_type import FileType
 from mgtools.mg1.enumerators.resource_platform import ResourcePlatform
 from mgtools.mg1.formats.palette import Palette
+from mgtools.mg1.formats.sprite import Sprite
 from mgtools.mg1.mappings import FILE_TYPE_MAP
 
 
@@ -120,3 +121,9 @@ class Resource:
             return Palette(palette_files[palette_id])
 
         return Palette(palette_files[0])
+
+    def get_sprite(self, index: int) -> Sprite:
+        if FILE_TYPE_MAP.get(index) != FileType.SPRITE:
+            raise ValueError(f"File at index {index} is not a sprite.")
+
+        return Sprite(self.__files[index])
