@@ -15,7 +15,11 @@ from mgtools.mg1.enumerators.resource_platform import ResourcePlatform
 class Resource:
 
     def __init__(self) -> None:
+        self.__platform = ResourcePlatform.UNKNOWN
         self.__files = []
+
+    def __str__(self) -> str:
+        return f"Resource(platform={self.__platform.name}, files_count={len(self.__files)})"
 
     def load(self, reader: BufferedReader) -> None:
         magic = reader.read(2)
@@ -27,11 +31,9 @@ class Resource:
         platform_int = int.from_bytes(reader.read(2))
 
         try:
-            platform = ResourcePlatform(platform_int)
+            self.__platform = ResourcePlatform(platform_int)
         except ValueError:
-            platform = ResourcePlatform.UNKNOWN
-
-        typer.echo(f"Resource ID: {platform.name}")
+            self.__platform = ResourcePlatform.UNKNOWN
 
         self.__load_files(reader)
 
