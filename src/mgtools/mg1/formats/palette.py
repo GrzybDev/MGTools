@@ -9,8 +9,6 @@ from mgtools.mg1.chunks.single import Single
 
 class Palette:
 
-    __header_bytes = b""
-
     @property
     def color_map(self) -> bytes:
         color_map = b""
@@ -26,19 +24,16 @@ class Palette:
         self.__parse_data(chunk.data)
 
     def __str__(self) -> str:
-        return f"Palette(colors_count={len(self.__colors)}, header_bytes={self.__header_bytes})"
+        return f"Palette(colors_count={len(self.__colors)})"
 
     def __parse_data(self, data: BytesIO) -> None:
         self.__colors.clear()
 
-        self.__header_bytes = data.read(4)
+        colors_count = int.from_bytes(data.read(4)) // 4
 
-        for _ in range(164):
-            try:
-                b, g, r, _ = struct.unpack("BBBB", data.read(4))
-                self.__colors.append((b, g, r))
-            except struct.error:
-                break
+        for _ in range(colors_count):
+            b, g, r, _ = struct.unpack("BBBB", data.read(4))
+            self.__colors.append((b, g, r))
 
     def save(self, path: Path) -> None:
         # Save palette as a XML file
