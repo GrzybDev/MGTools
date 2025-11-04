@@ -3,6 +3,8 @@ from typing import Annotated
 
 import typer
 
+from mgtools.mg1.helpers import export_file
+from mgtools.mg1.mappings import LOCALIZABLE_CHUNKS
 from mgtools.mg1.resource import Resource
 
 app = typer.Typer(help="Tools for modding PC ports of Metal Gear")
@@ -27,10 +29,18 @@ def export(
         ),
     ] = False,
 ):
+    if output_dir is None:
+        output_dir = input_file.parent / input_file.stem
+
     resource = Resource()
 
     with input_file.open("rb") as f:
         resource.load(f)
+
+    export_queue = range(resource.file_count) if export_all else LOCALIZABLE_CHUNKS
+
+    for index in export_queue:
+        export_file(resource, index, output_dir)
 
 
 if __name__ == "__main__":
