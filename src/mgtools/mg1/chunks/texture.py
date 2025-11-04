@@ -7,10 +7,10 @@ class Texture(Chunk):
 
     @property
     def data(self) -> BytesIO:
-        return BytesIO(b"".join(tex for tex in self.__textures))
+        return BytesIO(self.__header_bytes + b"".join(tex for tex in self.__textures))
 
     def __init__(self, header_data: bytes) -> None:
-        self.__header = header_data
+        self.__header_bytes = header_data
         self.__textures = []
 
     def add_texture(self, texture_data: bytes) -> None:
