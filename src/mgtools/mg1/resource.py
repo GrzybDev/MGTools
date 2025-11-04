@@ -1,8 +1,6 @@
 import os
 from io import BufferedReader
 
-import typer
-
 from mgtools.mg1.chunks.animated_sprite import AnimatedSprite
 from mgtools.mg1.chunks.font import Font
 from mgtools.mg1.chunks.single import Single
@@ -18,12 +16,18 @@ from mgtools.mg1.mappings import FILE_TYPE_MAP
 
 class Resource:
 
+    @property
+    def file_count(self) -> int:
+        return len(self.__files)
+
     def __init__(self) -> None:
         self.__platform = ResourcePlatform.UNKNOWN
         self.__files = []
 
     def __str__(self) -> str:
-        return f"Resource(platform={self.__platform.name}, files_count={len(self.__files)})"
+        return (
+            f"Resource(platform={self.__platform.name}, files_count={self.file_count})"
+        )
 
     def load(self, reader: BufferedReader) -> None:
         magic = reader.read(2)
