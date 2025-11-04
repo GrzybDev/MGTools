@@ -1,12 +1,14 @@
 from io import BytesIO
+from pathlib import Path
 
 from PIL import Image
 
+from mgtools.file import File
 from mgtools.mg1.chunks.single import Single
 from mgtools.mg1.formats.palette import Palette
 
 
-class Sprite:
+class Sprite(File):
 
     __header_bytes = b""
 
@@ -25,5 +27,5 @@ class Sprite:
     def set_palette(self, palette: Palette):
         self.__image.putpalette(palette.color_map)
 
-    def save(self, path: str) -> None:
+    def save(self, path: Path) -> None:
         self.__image.save(path)

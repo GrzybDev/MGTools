@@ -4,10 +4,11 @@ import xml.etree.ElementTree as ET
 from io import BytesIO
 from pathlib import Path
 
+from mgtools.file import File
 from mgtools.mg1.chunks.single import Single
 
 
-class Palette:
+class Palette(File):
 
     @property
     def color_map(self) -> bytes:
