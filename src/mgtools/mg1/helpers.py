@@ -8,10 +8,12 @@ from mgtools.mg1.constants import (
 )
 from mgtools.mg1.formats.palette import Palette
 from mgtools.mg1.formats.sprite import Sprite
+from mgtools.mg1.mappings import FILE_NAME_MAP
 
 
 def export_file(resource, index, output_dir):
     file = resource.get(index)
+    file_name = FILE_NAME_MAP.get(index, f"{index:02d}")
     file_path = output_dir
 
     if isinstance(file, Sprite):
@@ -21,13 +23,13 @@ def export_file(resource, index, output_dir):
         color_palette = resource.get_palette()
 
         file.set_palette(color_palette)
-        file.save(file_path / f"{index:02d}.{EXPORT_SPRITE_EXTENSION}")
+        file.save(file_path / f"{file_name}.{EXPORT_SPRITE_EXTENSION}")
     elif isinstance(file, Palette):
         file_path = output_dir / EXPORT_PALETTE_FOLDER
         file_path.mkdir(parents=True, exist_ok=True)
-        file.save(file_path / f"{index:02d}.{EXPORT_PALETTE_EXTENSION}")
+        file.save(file_path / f"{file_name}.{EXPORT_PALETTE_EXTENSION}")
     else:
         file_path = output_dir / EXPORT_UNKNOWN_FOLDER
         file_path.mkdir(parents=True, exist_ok=True)
 
-        file.save(file_path / f"{index:02d}.{EXPORT_UNKNOWN_EXTENSION}")
+        file.save(file_path / f"{file_name}.{EXPORT_UNKNOWN_EXTENSION}")

@@ -33,4 +33,12 @@ FILE_TYPE_MAP = {
     74: FileType.PALETTE,
 }
 
+FILE_NAME_MAP = {
+    41: "ui",
+    62: "font_additional_chars",
+    69: "vs",
+    70: "character_names",
+    74: "palette",
+}
+
 LOCALIZABLE_CHUNKS = [41, 62, 69, 70, 74]
