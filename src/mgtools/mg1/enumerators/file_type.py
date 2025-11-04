@@ -1,8 +1,5 @@
-from enum import IntEnum
+from enum import Enum
 
 
-class FileType(IntEnum):
-    SINGLE = 16384
-    ANIMATED_SPRITE = 16385
-    FONT = 16386
-    TEXTURE = 16403
+class FileType(Enum):
+    UNKNOWN = -1

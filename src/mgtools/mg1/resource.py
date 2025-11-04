@@ -8,7 +8,7 @@ from mgtools.mg1.chunks.font import FontChunk
 from mgtools.mg1.chunks.single import SingleChunk
 from mgtools.mg1.chunks.texture import TextureChunk
 from mgtools.mg1.constants import RESOURCE_MAGIC
-from mgtools.mg1.enumerators.file_type import FileType
+from mgtools.mg1.enumerators.chunk_type import ChunkType
 from mgtools.mg1.enumerators.resource_platform import ResourcePlatform
 
 
@@ -42,19 +42,19 @@ class Resource:
             if file_type_int == 0:
                 break
 
-            file_type = FileType(file_type_int)
+            chunk_type = ChunkType(file_type_int)
 
-            match file_type:
-                case FileType.SINGLE:
+            match chunk_type:
+                case ChunkType.SINGLE:
                     file = self.__read_chunk(reader)
                     self.__files.append(file)
-                case FileType.ANIMATED_SPRITE:
+                case ChunkType.ANIMATED_SPRITE:
                     anim = self.__read_animated_sprite_chunk(reader)
                     self.__files.append(anim)
-                case FileType.FONT:
+                case ChunkType.FONT:
                     font = self.__read_font_chunk(reader)
                     self.__files.append(font)
-                case FileType.TEXTURE:
+                case ChunkType.TEXTURE:
                     texture = self.__read_texture_chunk(reader)
                     self.__files.append(texture)
 
