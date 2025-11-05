@@ -53,5 +53,5 @@ class Palette(File):
             )
 
         tree = ET.ElementTree(root)
-        ET.indent(tree, space="  ")
+        ET.indent(tree)
         tree.write(path, encoding="utf-8", xml_declaration=True)
