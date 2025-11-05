@@ -1,4 +1,5 @@
 from mgtools.mg1.constants import (
+    EXPORT_FONT_FOLDER,
     EXPORT_LOCALE_FOLDER,
     EXPORT_PALETTE_EXTENSION,
     EXPORT_PALETTE_FOLDER,
@@ -7,13 +8,14 @@ from mgtools.mg1.constants import (
     EXPORT_UNKNOWN_EXTENSION,
     EXPORT_UNKNOWN_FOLDER,
 )
+from mgtools.mg1.formats.font import Font
 from mgtools.mg1.formats.locale import Locale
 from mgtools.mg1.formats.palette import Palette
 from mgtools.mg1.formats.sprite import Sprite
 from mgtools.mg1.mappings import FILE_NAME_MAP
 
 
-def export_file(resource, index, output_dir):
+def export_file(resource, index, output_dir, separate_chars: bool = False) -> None:
     file = resource.get(index)
     file_name = FILE_NAME_MAP.get(index, f"{index:02d}")
     file_path = output_dir
@@ -34,6 +36,10 @@ def export_file(resource, index, output_dir):
         file_path = output_dir / EXPORT_LOCALE_FOLDER
         file_path.mkdir(parents=True, exist_ok=True)
         file.save(file_path)
+    elif isinstance(file, Font):
+        file_path = output_dir / EXPORT_FONT_FOLDER
+        file_path.mkdir(parents=True, exist_ok=True)
+        file.save(file_path, separate_chars=separate_chars)
     else:
         file_path = output_dir / EXPORT_UNKNOWN_FOLDER
         file_path.mkdir(parents=True, exist_ok=True)

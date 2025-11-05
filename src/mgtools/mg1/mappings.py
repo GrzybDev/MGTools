@@ -32,6 +32,7 @@ FILE_TYPE_MAP = {
     70: FileType.SPRITE,
     72: FileType.LOCALE,
     74: FileType.PALETTE,
+    75: FileType.FONT,
 }
 
 FILE_NAME_MAP = {
@@ -42,7 +43,7 @@ FILE_NAME_MAP = {
     74: "palette",
 }
 
-LOCALIZABLE_CHUNKS = [41, 62, 69, 70, 72, 74]
+LOCALIZABLE_CHUNKS = [41, 62, 69, 70, 72, 74, 75]
 TEXT_BLOCKS = [3, 4, 5, 6, 7, 8, 9, 13, 14, 15]
 TEXT_BLOCKS_NAMES = {
     3: "miscellaneous_1",

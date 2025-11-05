@@ -6,3 +6,4 @@ class FileType(Enum):
     PALETTE = 0
     SPRITE = 1
     LOCALE = 2
+    FONT = 3

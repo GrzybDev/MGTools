@@ -3,13 +3,14 @@ from io import BufferedReader
 
 from mgtools.file import File
 from mgtools.mg1.chunks.animated_sprite import AnimatedSprite
-from mgtools.mg1.chunks.font import Font
+from mgtools.mg1.chunks.font import Font as FontChunk
 from mgtools.mg1.chunks.single import Single
 from mgtools.mg1.chunks.texture import Texture
 from mgtools.mg1.constants import RESOURCE_MAGIC
 from mgtools.mg1.enumerators.chunk_type import ChunkType
 from mgtools.mg1.enumerators.file_type import FileType
 from mgtools.mg1.enumerators.resource_platform import ResourcePlatform
+from mgtools.mg1.formats.font import Font
 from mgtools.mg1.formats.locale import Locale
 from mgtools.mg1.formats.palette import Palette
 from mgtools.mg1.formats.sprite import Sprite
@@ -89,8 +90,8 @@ class Resource:
         reader.seek(4, os.SEEK_CUR)  # Skip padding/alignment bytes
         return anim
 
-    def __read_font_chunk(self, reader: BufferedReader) -> Font:
-        font = Font(reader.read(2))
+    def __read_font_chunk(self, reader: BufferedReader) -> FontChunk:
+        font = FontChunk(reader.read(2))
 
         for _ in range(5):  # Figure out where this 5 comes from
             page_size = int.from_bytes(reader.read(4))
@@ -143,5 +144,7 @@ class Resource:
                 return Palette(self.__files[index])
             case FileType.LOCALE:
                 return Locale(self.__files[index])
+            case FileType.FONT:
+                return Font(self.__files[index])
             case _:
                 return Unknown(self.__files[index])

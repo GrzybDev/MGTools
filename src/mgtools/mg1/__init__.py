@@ -28,6 +28,12 @@ def export(
             help="Export all resources, including those not classified as 'localizable'.",
         ),
     ] = False,
+    separate_chars: Annotated[
+        bool,
+        typer.Option(
+            help="Export font characters as separate images instead of a single atlas.",
+        ),
+    ] = False,
 ):
     if output_dir is None:
         output_dir = input_file.parent / input_file.stem
@@ -40,7 +46,7 @@ def export(
     export_queue = range(resource.file_count) if export_all else LOCALIZABLE_CHUNKS
 
     for index in export_queue:
-        export_file(resource, index, output_dir)
+        export_file(resource, index, output_dir, separate_chars=separate_chars)
 
 
 if __name__ == "__main__":
