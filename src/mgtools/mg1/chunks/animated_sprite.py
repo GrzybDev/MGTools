@@ -8,7 +8,10 @@ class AnimatedSprite(Chunk):
 
     @property
     def data(self) -> BytesIO:
-        return BytesIO(b"".join(frame.data.read() for frame in self.__frames))
+        init_bytes = (len(self.__frames) * 2).to_bytes(2)
+        frame_data = [frame.data.read() for frame in self.__frames]
+        full_frame_bytes = [len(frame).to_bytes(4) + frame for frame in frame_data]
+        return BytesIO(init_bytes + b"".join(full_frame_bytes) + (b"\0" * 4))
 
     def __init__(self):
         self.__frames = []

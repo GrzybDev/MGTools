@@ -7,7 +7,8 @@ class Font(Chunk):
 
     @property
     def data(self) -> BytesIO:
-        return BytesIO(self.__header_bytes + b"".join(page for page in self.__pages))
+        page_bytes = [len(page).to_bytes(4) + page for page in self.__pages]
+        return BytesIO(self.__header_bytes + b"".join(page_bytes))
 
     @property
     def page_count(self) -> int:
