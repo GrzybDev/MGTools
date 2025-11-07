@@ -2,7 +2,7 @@ from enum import IntEnum
 
 
 class ResourcePlatform(IntEnum):
-    UNKNOWN = -1
+    UNKNOWN = 0
     GOG_ENGLISH = 6924
     GOG_FRENCH = 9006
     GOG_GERMAN = 10789
