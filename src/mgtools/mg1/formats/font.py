@@ -80,6 +80,25 @@ class Font(File):
         )
         return image.point(lambda i: i * (255 // 3))
 
+    @staticmethod
+    def pack_glyph_image(pixelbytes: bytes) -> bytes:
+        packed_bitmap_data = bytearray()
+        pixels = pixelbytes
+
+        try:
+            for i in range(0, len(pixels), 4):
+                p1 = pixels[i] // (255 // 3)
+                p2 = pixels[i + 1] // (255 // 3)
+                p3 = pixels[i + 2] // (255 // 3)
+                p4 = pixels[i + 3] // (255 // 3)
+
+                packed_byte = (p1 << 6) | (p2 << 4) | (p3 << 2) | p4
+                packed_bitmap_data.append(packed_byte)
+        except IndexError:
+            pass  # Ignore incomplete bytes at the end
+
+        return bytes(packed_bitmap_data)
+
     def __write_metadata(self, path: Path) -> None:
         root = ET.Element("Font")
 

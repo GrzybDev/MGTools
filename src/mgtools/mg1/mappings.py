@@ -1,4 +1,11 @@
+from mgtools.mg1.enumerators.chunk_type import ChunkType
 from mgtools.mg1.enumerators.file_type import FileType
+
+CHUNK_TYPE_OVERRIDES = {
+    52: ChunkType.ANIMATED_SPRITE,
+    75: ChunkType.FONT,
+    76: ChunkType.TEXTURE,
+}
 
 FILE_TYPE_MAP = {
     41: FileType.SPRITE,

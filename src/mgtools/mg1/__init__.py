@@ -3,6 +3,7 @@ from typing import Annotated
 
 import typer
 
+from mgtools.mg1.constants import RESOURCE_FILES_COUNT
 from mgtools.mg1.helpers import export_file
 from mgtools.mg1.mappings import LOCALIZABLE_CHUNKS
 from mgtools.mg1.resource import Resource
@@ -47,6 +48,27 @@ def export(
 
     for index in export_queue:
         export_file(resource, index, output_dir, separate_chars=separate_chars)
+
+
+@app.command(help="Generate new resource file from exported resources.")
+def generate(
+    input_dir: Annotated[
+        Path, typer.Argument(exists=True, file_okay=False, readable=True)
+    ],
+    output_file: Annotated[
+        Path | None, typer.Argument(file_okay=True, writable=True)
+    ] = None,
+):
+    resource = Resource()
+
+    for i in range(RESOURCE_FILES_COUNT):
+        resource.add(i, input_dir)
+
+    if output_file is None:
+        output_file = input_dir / f"{input_dir.name}.bin"
+
+    with output_file.open("wb") as f:
+        resource.save(f)
 
 
 if __name__ == "__main__":
