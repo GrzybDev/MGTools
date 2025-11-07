@@ -93,6 +93,8 @@ class Font(File):
                     "index": str(ord(glyph.char) - 30),
                     "char": repr(str(glyph.char))[1:-1],
                     "width": str(glyph.width),
+                    "x_offset": str(glyph.x_offset),
+                    "y_offset": str(glyph.y_offset),
                 }
                 ET.SubElement(page_element, "Glyph", attrib=glyph_attrib)
 
@@ -117,13 +119,14 @@ class Font(File):
                 y_offset += FONT_GLYPH_HEIGHTS[page_index]
 
             atlas_image.paste(glyph.image, (x_offset, y_offset))
+            glyph.x_offset = x_offset
+            glyph.y_offset = y_offset
+
             x_offset += glyph.width
 
         atlas_image.save(path)
 
     def save(self, path: Path, separate_chars: bool = False) -> None:
-        self.__write_metadata(path / "characters.xml")
-
         for page_index in range(len(self.__pages)):
             if separate_chars:
                 page = self.__pages[page_index]
@@ -137,3 +140,5 @@ class Font(File):
                     glyph.image.save(page_dir / f"char_{ord(glyph.char) - 30:03d}.png")
             else:
                 self.__write_bitmap(path / f"page_{page_index}.png", page_index)
+
+        self.__write_metadata(path / "characters.xml")

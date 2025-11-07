@@ -9,3 +9,5 @@ class Glyph:
     offset: int
     width: int
     image: Image.Image | None = None
+    x_offset: int = 0
+    y_offset: int = 0
