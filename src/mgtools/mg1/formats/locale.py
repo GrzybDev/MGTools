@@ -32,14 +32,14 @@ class Locale(File):
             strings = []
 
             while True:
-                block_bytes.seek(1, os.SEEK_CUR)
+                string_flag = int.from_bytes(block_bytes.read(1))
                 string_length = int.from_bytes(block_bytes.read(2))
 
                 if string_length == 0:
                     break
 
                 string_data = block_bytes.read(string_length)
-                strings.append(string_data.decode("shift_jis"))
+                strings.append((string_flag, string_data.decode("shift_jis")))
 
             self.__locale_data[block_id] = strings
 
@@ -47,9 +47,21 @@ class Locale(File):
         for block_id, strings in self.__locale_data.items():
             po = polib.POFile()
 
-            for string in strings:
-                entry = polib.POEntry(msgid=string, msgstr="")
+            for string_flag, string_data in strings:
+                entry = polib.POEntry(
+                    msgid=string_data, msgstr="", flags=[str(string_flag)]
+                )
                 po.append(entry)
 
             block_name = TEXT_BLOCKS_NAMES.get(block_id, f"{block_id}")
             po.save(str(path / f"{block_name}.{EXPORT_LOCALE_EXTENSION}"))
+
+        for block_id, block_data in enumerate(self.__block_data):
+            script_path = path / "scripts"
+            script_path.mkdir(exist_ok=True)
+
+            if block_id in TEXT_BLOCKS:
+                continue
+
+            with open(script_path / f"{block_id}.bin", "wb") as script_file:
+                script_file.write(block_data)
