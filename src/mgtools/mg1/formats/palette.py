@@ -40,7 +40,7 @@ class Palette(File):
         # Save palette as a XML file
         root = ET.Element("Palette")
 
-        for index, (r, g, b) in enumerate(self.__colors):
+        for index, (b, g, r) in enumerate(self.__colors):
             color_element = ET.SubElement(
                 root,
                 "Color",
