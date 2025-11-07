@@ -11,31 +11,44 @@ from mgtools.mg1.formats.palette import Palette
 class Sprite(File):
 
     def __init__(self, chunk: Single):
-        self.__image = None
+        self.__images = []
         self.__parse_data(chunk.data)
 
     def __str__(self) -> str:
-        if not self.__image:
+        if not self.__images:
             return "Sprite(None)"
 
-        return f"Sprite(width={self.__image.width}, height={self.__image.height})"
+        return f"Sprite()"
 
     def __parse_data(self, chunk: BytesIO) -> None:
-        pixel_count = int.from_bytes(chunk.read(4))
-        width = int.from_bytes(chunk.read(4), "little")
-        height = int.from_bytes(chunk.read(4), "little")
+        while True:
+            sprite_length = int.from_bytes(chunk.read(4))
 
-        pixel_data = chunk.read(pixel_count)
-        self.__image = Image.frombytes("P", (width, height), pixel_data)
+            if sprite_length == 0:
+                break
+
+            sprite_data = BytesIO(chunk.read(sprite_length))
+
+            width = int.from_bytes(sprite_data.read(4), "little")
+            height = int.from_bytes(sprite_data.read(4), "little")
+
+            pixel_data = sprite_data.read()
+            image = Image.frombytes("P", (width, height), pixel_data)
+            self.__images.append(image)
 
     def set_palette(self, palette: Palette):
-        if not self.__image:
+        if not self.__images:
             raise ValueError("Image data is not loaded.")
 
-        self.__image.putpalette(palette.color_map)
+        for image in self.__images:
+            image.putpalette(palette.color_map)
 
     def save(self, path: Path) -> None:
-        if not self.__image:
+        if not self.__images:
             raise ValueError("Image data is not loaded.")
 
-        self.__image.save(path)
+        for i, self.__image in enumerate(self.__images):
+            if len(self.__images) > 1:
+                self.__image.save(path.with_name(f"{path.stem}_{i}{path.suffix}"))
+            else:
+                self.__image.save(path)
