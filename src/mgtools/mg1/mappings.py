@@ -1,10 +1,10 @@
-from mgtools.mg1.enumerators.chunk_type import ChunkType
-from mgtools.mg1.enumerators.file_type import FileType
+from mgtools.enumerators.data_type import DataType
+from mgtools.enumerators.file_type import FileType
 
-CHUNK_TYPE_OVERRIDES = {
-    52: ChunkType.ANIMATED_SPRITE,
-    75: ChunkType.FONT,
-    76: ChunkType.TEXTURE,
+DATA_TYPE_MAP = {
+    52: DataType.WITH_COUNT,
+    75: DataType.MG1_FONT,
+    76: DataType.MG1_TEXTURE,
 }
 
 FILE_TYPE_MAP = {
@@ -42,25 +42,7 @@ FILE_TYPE_MAP = {
     75: FileType.FONT,
 }
 
-FILE_NAME_MAP = {
-    41: "ui",
-    62: "font_additional_chars",
-    69: "vs",
-    70: "character_names",
-    74: "palette",
-}
+FILE_NAME_MAP = {}
 
-LOCALIZABLE_CHUNKS = [41, 62, 69, 70, 72, 74, 75]
 TEXT_BLOCKS = [3, 4, 5, 6, 7, 8, 9, 13, 14, 15]
-TEXT_BLOCKS_NAMES = {
-    3: "miscellaneous_1",
-    4: "miscellaneous_2",
-    5: "radio_big_boss_1",
-    6: "radio_big_boss_2",
-    7: "radio_resistance_leader",
-    8: "radio_steve_diane",
-    9: "radio_jennifer",
-    13: "opening",
-    14: "ending",
-    15: "frontend",
-}
+TEXT_BLOCKS_NAMES = {}
