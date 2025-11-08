@@ -86,43 +86,72 @@ class Font(File):
         page_bytes = b""
 
         for page_idx, page in enumerate(page_elements):
-            atlas_image = Image.open(
-                file_path / f"{page_idx}.{EXPORT_FONT_ATLAS_EXTENSION}"
-            ).convert("L")
+            altas_path = file_path / f"{page_idx}.{EXPORT_FONT_ATLAS_EXTENSION}"
 
             glyphs_data = bytearray()
             bitmap_data = bytearray()
 
-            for glyph_element in page.findall("Glyph"):
-                width = int(glyph_element.get("width", "0"))
+            if not altas_path.exists():
+                page_glyphs_path = file_path / f"{page_idx}"
 
-                x_offset = int(glyph_element.get("x_offset", "0"))
-                y_offset = int(glyph_element.get("y_offset", "0"))
-
-                glyph_image = atlas_image.crop(
-                    (
-                        x_offset,
-                        y_offset,
-                        x_offset + width,
-                        y_offset + FONT_GLYPH_HEIGHTS[page_idx],
+                for glyph_element in page.findall("Glyph"):
+                    glyph_image_path = (
+                        page_glyphs_path
+                        / f"{int(glyph_element.get('index', '')):03d}.png"
                     )
-                )
 
-                pixel_data = glyph_image.tobytes()
-                glyph_bitmap_data = Font.__pack_bitmap_data(pixel_data)
+                    if not glyph_image_path.exists():
+                        width = int(glyph_element.get("width", "0"))
+                        glyph_bitmap_data = b""
+                    else:
+                        glyph_image = Image.open(glyph_image_path).convert("L")
+                        pixel_data = glyph_image.tobytes()
 
-                glyphs_data.extend(len(bitmap_data).to_bytes(2, "little"))
+                        glyph_bitmap_data = Font.__pack_bitmap_data(pixel_data)
 
-                if width == 1:
-                    glyphs_data.extend((0).to_bytes(2))
-                else:
-                    glyphs_data.extend(((width - 1) << 4).to_bytes(2, "little"))
+                        width = glyph_image.width
 
-                if width != 1 and width != 4096:
-                    bitmap_data.extend(glyph_bitmap_data)
+                    glyphs_data.extend(len(bitmap_data).to_bytes(2, "little"))
 
-            while len(glyphs_data + bitmap_data) < FONT_MINIMUM_PAGE_SIZE:
-                bitmap_data.extend(b"\0")
+                    if width == 1:
+                        glyphs_data.extend((0).to_bytes(2))
+                    else:
+                        glyphs_data.extend(((width - 1) << 4).to_bytes(2, "little"))
+
+                    if width != 1 and width != 4096:
+                        bitmap_data.extend(glyph_bitmap_data)
+            else:
+                atlas_image = Image.open(
+                    file_path / f"{page_idx}.{EXPORT_FONT_ATLAS_EXTENSION}"
+                ).convert("L")
+
+                for glyph_element in page.findall("Glyph"):
+                    width = int(glyph_element.get("width", "0"))
+
+                    x_offset = int(glyph_element.get("x_offset", "0"))
+                    y_offset = int(glyph_element.get("y_offset", "0"))
+
+                    glyph_image = atlas_image.crop(
+                        (
+                            x_offset,
+                            y_offset,
+                            x_offset + width,
+                            y_offset + FONT_GLYPH_HEIGHTS[page_idx],
+                        )
+                    )
+
+                    pixel_data = glyph_image.tobytes()
+                    glyph_bitmap_data = Font.__pack_bitmap_data(pixel_data)
+
+                    glyphs_data.extend(len(bitmap_data).to_bytes(2, "little"))
+
+                    if width == 1:
+                        glyphs_data.extend((0).to_bytes(2))
+                    else:
+                        glyphs_data.extend(((width - 1) << 4).to_bytes(2, "little"))
+
+                    if width != 1 and width != 4096:
+                        bitmap_data.extend(glyph_bitmap_data)
 
             page_bytes += (
                 len(glyphs_data + bitmap_data).to_bytes(4) + glyphs_data + bitmap_data
@@ -248,6 +277,19 @@ class Font(File):
 
         atlas_image.save(output_path)
 
+    def __generate_glyph_images(self, output_path: Path, page_index: int) -> None:
+        glyphs = self.__pages[page_index]
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        for glyph in glyphs:
+            if glyph.image is None:
+                continue
+
+            glyph_image_path = (
+                output_path / f"{ord(glyph.char) - FONT_START_CHAR:03d}.png"
+            )
+            glyph.image.save(glyph_image_path)
+
     def __generate_metadata(self, output_path: Path) -> None:
         root = ET.Element("Font")
 
@@ -275,10 +317,16 @@ class Font(File):
 
     def export(self, output_path: Path, **kwargs) -> None:
         for page_index in range(len(self.__pages)):
-            self.__generate_atlas(
-                output_path / f"{page_index}.{EXPORT_FONT_ATLAS_EXTENSION}",
-                page_index,
-            )
+            if kwargs.get("separate_chars", False):
+                self.__generate_glyph_images(
+                    output_path / f"{page_index}",
+                    page_index,
+                )
+            else:
+                self.__generate_atlas(
+                    output_path / f"{page_index}.{EXPORT_FONT_ATLAS_EXTENSION}",
+                    page_index,
+                )
 
             self.__generate_metadata(
                 output_path,

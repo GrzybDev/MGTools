@@ -85,7 +85,7 @@ class Resource:
                 file = UnknownFile.from_stream(reader)
                 self.__files.append(file)
 
-    def export(self, output_dir: Path, file_index: int) -> None:
+    def export(self, output_dir: Path, file_index: int, **kwargs) -> None:
         file = self.__files[file_index]
 
         match self.__game:
@@ -121,7 +121,7 @@ class Resource:
                 file_path = output_dir / EXPORT_UNKNOWN_FOLDER
 
         file_path.mkdir(parents=True, exist_ok=True)
-        file.export(file_path / file_name)
+        file.export(file_path / file_name, **kwargs)
 
     def add_from_folder(self, input_dir: Path, file_index: int) -> None:
         match self.__game:

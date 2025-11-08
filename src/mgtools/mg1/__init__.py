@@ -21,6 +21,10 @@ def export(
     output_dir: Annotated[
         Path | None, typer.Argument(file_okay=False, writable=True)
     ] = None,
+    separate_chars: Annotated[
+        bool,
+        typer.Option(help="Export font glyphs as separate images instead of an atlas."),
+    ] = False,
 ):
     if output_dir is None:
         output_dir = input_file.parent / input_file.stem
@@ -28,14 +32,12 @@ def export(
     resource = Resource.from_file(input_file)
 
     for index in range(resource.file_count):
-        resource.export(output_dir, index)
+        resource.export(output_dir, index, separate_chars=separate_chars)
 
 
 @app.command(help="Generate new resource file from specified folder.")
 def generate(
-    input_dir: Annotated[
-        Path, typer.Argument(exists=True, dir_okay=True, readable=True)
-    ],
+    input_dir: Annotated[Path, typer.Argument(dir_okay=True, readable=True)],
     output_file: Annotated[
         Path | None, typer.Argument(file_okay=True, writable=True)
     ] = None,
