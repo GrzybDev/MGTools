@@ -5,6 +5,7 @@ from PIL import Image
 
 @dataclass
 class Glyph:
+    index: int
     char: str
     offset: int
     width: int

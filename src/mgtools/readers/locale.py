@@ -1,13 +1,18 @@
+import json
 from io import BufferedReader, BytesIO
 from pathlib import Path
 
 import polib
 
-from mgtools.constants import EXPORT_LOCALE_SCRIPTS_FOLDER
+from mgtools.constants import (
+    EXPORT_LOCALE_CHAR_SUBSTITION_MAP_FILENAME,
+    EXPORT_LOCALE_SCRIPTS_FOLDER,
+)
 from mgtools.enumerators.data_type import DataType
 from mgtools.file import File
 from mgtools.mg1.constants import LOCALE_BLOCKS_COUNT
 from mgtools.mg1.mappings import TEXT_BLOCKS
+from mgtools.mgscii import read_mgscii_string, write_mgscii_string
 
 
 class Locale(File):
@@ -64,6 +69,17 @@ class Locale(File):
     def from_file(file_path: Path) -> File:
         locale_bytes = b""
 
+        # Load char substitution map if exists
+        char_substition_map_path = (
+            file_path.parent / EXPORT_LOCALE_CHAR_SUBSTITION_MAP_FILENAME
+        )
+
+        char_substition_map = {}
+
+        if char_substition_map_path.exists():
+            with open(char_substition_map_path, "r", encoding="utf-8") as f:
+                char_substition_map = json.load(f)
+
         for idx in range(LOCALE_BLOCKS_COUNT):
             if idx not in TEXT_BLOCKS:
                 block_path = file_path / EXPORT_LOCALE_SCRIPTS_FOLDER / f"{idx:02d}.bin"
@@ -80,7 +96,11 @@ class Locale(File):
 
                 for entry in po:
                     string_flag = int(entry.flags[0]) if entry.flags else 0
-                    string_data = (entry.msgstr or entry.msgid).encode("shift_jis")
+                    string_unicode = entry.msgstr or entry.msgid
+
+                    string_data = write_mgscii_string(
+                        string_unicode, char_substition_map
+                    )
                     string_length = len(string_data)
 
                     block_stream.write(string_flag.to_bytes(1))
@@ -109,7 +129,8 @@ class Locale(File):
             if string_length == 0:
                 break
 
-            string_data = block_stream.read(string_length).decode("shift_jis")
+            string_data = read_mgscii_string(block_stream.read(string_length))
+
             po.append(
                 polib.POEntry(
                     msgid=string_data,
@@ -125,7 +146,7 @@ class Locale(File):
 
         for entry in po:
             string_flag = int(entry.flags[0]) if entry.flags else 0
-            string_data = (entry.msgstr or entry.msgid).encode("shift_jis")
+            string_data = write_mgscii_string(entry.msgstr or entry.msgid)
             string_length = len(string_data)
 
             block_stream.write(string_flag.to_bytes(1))

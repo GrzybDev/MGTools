@@ -18,6 +18,7 @@ from mgtools.mg1.constants import (
     FONT_MINIMUM_PAGE_SIZE,
     FONT_START_CHAR,
 )
+from mgtools.mgscii import get_mgscii_char
 
 
 class Font(File):
@@ -174,7 +175,8 @@ class Font(File):
             offset, metrics = struct.unpack("<HH", reader.read(4))
             glyphs.append(
                 Glyph(
-                    char=chr(FONT_START_CHAR + i),
+                    char=get_mgscii_char(FONT_START_CHAR + i),
+                    index=FONT_START_CHAR + i,
                     offset=offset,
                     width=(metrics >> 4) + 1,
                 )
@@ -285,9 +287,7 @@ class Font(File):
             if glyph.image is None:
                 continue
 
-            glyph_image_path = (
-                output_path / f"{ord(glyph.char) - FONT_START_CHAR:03d}.png"
-            )
+            glyph_image_path = output_path / f"{glyph.index:03d}.png"
             glyph.image.save(glyph_image_path)
 
     def __generate_metadata(self, output_path: Path) -> None:
@@ -300,7 +300,7 @@ class Font(File):
                 ET.SubElement(
                     page_element,
                     "Glyph",
-                    index=str(ord(glyph.char) - FONT_START_CHAR),
+                    index=str(glyph.index),
                     char=repr(str(glyph.char))[1:-1],
                     width=str(glyph.width),
                     x_offset=str(glyph.x_offset),
