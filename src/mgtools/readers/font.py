@@ -38,12 +38,12 @@ class Font(File):
                 else:
                     glyphs_data.extend(((glyph.width - 1) << 4).to_bytes(2, "little"))
 
-                if glyph.width != 1 and glyph.width != 4096:
+                if glyph.width != 1 and glyph.width != 4096 and glyph.image is not None:
                     packed_bitmap_data = Font.__pack_bitmap_data(glyph.image.tobytes())
                     bitmap_data.extend(packed_bitmap_data)
 
-            while len(glyphs_data + bitmap_data) < FONT_MINIMUM_PAGE_SIZE:
-                bitmap_data.extend(b"\0")
+            missing_bytes = FONT_MINIMUM_PAGE_SIZE - len(glyphs_data + bitmap_data)
+            bitmap_data.extend(b"\0" * missing_bytes)
 
             page_bytes += (
                 len(glyphs_data + bitmap_data).to_bytes(4) + glyphs_data + bitmap_data
