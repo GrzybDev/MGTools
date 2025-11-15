@@ -48,7 +48,7 @@ Fonts          | ✔️     | ✔️ (metadata will be saved as .xml, atlas bitm
 Requirements
 ------------
 
-- Python 3.11+
+- Python 3.10+
 
 Installing
 ----------
