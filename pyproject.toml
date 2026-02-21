@@ -1,24 +1,27 @@
 [project]
 name = "mgtools"
 version = "0.1.0"
-description = ""
+description = "Collection of various tools for PC ports of Metal Gear / Metal Gear 2: Solid Snake!"
 authors = [
     {name = "Marek Grzyb",email = "marek@grzyb.dev"}
 ]
 readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = [
+    "LICENSE.md",
+]
 requires-python = ">=3.10"
 dependencies = [
-    "typer (>=0.20.0,<0.21.0)",
-    "pillow (>=12.0.0,<13.0.0)",
-    "polib @ git+https://github.com/GrzybDev/polib.git@state-machine-fix"
+    "pillow>=12.1.1",
+    "polib",
+    "typer>=0.24.0",
 ]
 
-[tool.poetry]
-packages = [{include = "mgtools", from = "src"}]
+[tool.uv]
+package = true
 
-[tool.poetry.scripts]
+[tool.uv.sources]
+polib = { git = "https://github.com/GrzybDev/polib.git", rev = "state-machine-fix" }
+
+[project.scripts]
 mgtools = "mgtools:app"
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
