@@ -7,9 +7,14 @@ from mgtools.file import File
 
 
 class UnknownFile(File):
-
     @property
     def raw_data(self) -> bytes:
+        if self.data_type == DataType.MG2_SECTION:
+            raw_bytes = b""
+            for entry in self.__data:
+                raw_bytes += len(entry).to_bytes(4, "big") + entry
+            return raw_bytes
+
         raw_bytes = self.data_type.to_bytes(2)
 
         match self.data_type:
@@ -27,8 +32,6 @@ class UnknownFile(File):
 
                 for entry in self.__data:
                     raw_bytes += len(entry).to_bytes(4) + entry
-            case _:
-                raise ValueError(f"Unknown data type: {self.data_type}")
 
         return raw_bytes
 
@@ -61,21 +64,28 @@ class UnknownFile(File):
 
                 reader.seek(4, os.SEEK_CUR)  # Skip padding
             case DataType.MG1_FONT:
-                identifier = reader.read(2)  # Figure out the meaning of this
+                identifier = reader.read(  # noqa: F841
+                    2
+                )  # Figure out the meaning of this
 
                 for _ in range(5):  # Figure out where this 5 comes from
                     entry_size = int.from_bytes(reader.read(4))
                     entry_data = reader.read(entry_size)
                     f.add_data(file_data=entry_data)
             case DataType.MG1_TEXTURE:
-                identifier = reader.read(2)  # Figure out the meaning of this
+                identifier = reader.read(  # noqa: F841
+                    2
+                )  # Figure out the meaning of this
 
                 for _ in range(2):  # Figure out where this 2 comes from
                     entry_size = int.from_bytes(reader.read(4))
                     entry_data = reader.read(entry_size)
                     f.add_data(file_data=entry_data)
-            case _:
-                raise ValueError(f"Unknown data type: {data_type}")
+            case DataType.MG2_SECTION:
+                while size_bytes := reader.read(4):
+                    block_size = int.from_bytes(size_bytes, "big")
+                    block_data = reader.read(block_size)
+                    f.add_data(file_data=block_data)
 
         return f
 
