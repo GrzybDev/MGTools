@@ -41,8 +41,3 @@ FILE_TYPE_MAP = {
     74: FileType.PALETTE,
     75: FileType.FONT,
 }
-
-FILE_NAME_MAP = {}
-
-TEXT_BLOCKS = [3, 4, 5, 6, 7, 8, 9, 13, 14, 15]
-TEXT_BLOCKS_NAMES = {}
