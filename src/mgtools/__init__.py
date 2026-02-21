@@ -59,7 +59,3 @@ def generate(
         resource.add_from_folder(input_dir, index)
 
     resource.save(output_file)
-
-
-if __name__ == "__main__":
-    app()
