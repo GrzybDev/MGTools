@@ -9,7 +9,6 @@ from mgtools.readers.palette import Palette
 
 
 class Sprite(File):
-
     @property
     def raw_data(self) -> bytes:
         raw_bytes = self.data_type.to_bytes(2)
@@ -28,8 +27,11 @@ class Sprite(File):
         self.__variants: list[Image.Image] = []
 
     @staticmethod
-    def from_stream(reader: BufferedReader | BytesIO) -> Sprite:
-        data_type = DataType(int.from_bytes(reader.read(2)))
+    def from_stream(
+        reader: BufferedReader | BytesIO, data_type: DataType | None = None
+    ) -> "Sprite":
+        if data_type is None:
+            data_type = DataType(int.from_bytes(reader.read(2)))
 
         if data_type != DataType.SIMPLE:
             raise ValueError("Sprite files must have SIMPLE data type.")
@@ -60,7 +62,7 @@ class Sprite(File):
         return Sprite.__get_sprite_bytes(image)
 
     @staticmethod
-    def from_file(file_path: Path) -> Sprite:
+    def from_file(file_path: Path, data_type: DataType | None = None) -> "Sprite":
         sprite_bytes = b""
 
         if not file_path.exists():

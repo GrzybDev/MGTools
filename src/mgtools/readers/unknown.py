@@ -37,8 +37,11 @@ class UnknownFile(File):
         self.__data: list[bytes] = []
 
     @staticmethod
-    def from_stream(reader: BufferedReader | BytesIO) -> UnknownFile:
-        data_type = DataType(int.from_bytes(reader.read(2)))
+    def from_stream(
+        reader: BufferedReader | BytesIO, data_type: DataType | None = None
+    ) -> "UnknownFile":
+        if data_type is None:
+            data_type = DataType(int.from_bytes(reader.read(2)))
 
         f = UnknownFile(data_type)
 
@@ -77,13 +80,13 @@ class UnknownFile(File):
         return f
 
     @staticmethod
-    def from_file(file_path: Path, data_type: DataType | None = None) -> UnknownFile:
+    def from_file(file_path: Path, data_type: DataType | None = None) -> "UnknownFile":
         if data_type is None:
             raise ValueError("Data type must be provided for UnknownFile.")
 
         with open(file_path, "rb") as f:
             data = f.read()
-            return UnknownFile.from_stream(BytesIO(data))
+            return UnknownFile.from_stream(BytesIO(data), data_type=data_type)
 
     def add_data(self, **kwargs) -> None:
         if "file_data" not in kwargs:

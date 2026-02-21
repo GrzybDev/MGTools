@@ -8,7 +8,6 @@ from mgtools.file import File
 
 
 class Palette(File):
-
     @property
     def raw_data(self) -> bytes:
         raw_bytes = self.data_type.to_bytes(2)
@@ -38,8 +37,10 @@ class Palette(File):
     @staticmethod
     def from_stream(
         reader: BufferedReader | BytesIO,
-    ) -> Palette:
-        data_type = DataType(int.from_bytes(reader.read(2)))
+        data_type: DataType | None = None,
+    ) -> "Palette":
+        if data_type is None:
+            data_type = DataType(int.from_bytes(reader.read(2)))
 
         if data_type != DataType.SIMPLE:
             raise ValueError("Palette files must have SIMPLE data type.")
@@ -59,10 +60,10 @@ class Palette(File):
         return f
 
     @staticmethod
-    def from_file(file_path: Path) -> Palette:
+    def from_file(file_path: Path, data_type: DataType | None = None) -> "Palette":
         xmlroot = ET.parse(file_path).getroot()
 
-        f = Palette(data_type=DataType.SIMPLE)
+        f = Palette(data_type=data_type or DataType.SIMPLE)
 
         for color_elem in xmlroot.findall("Color"):
             r = int(color_elem.get("r", "0"))

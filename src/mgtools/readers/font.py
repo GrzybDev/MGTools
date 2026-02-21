@@ -22,7 +22,6 @@ from mgtools.mgscii import get_mgscii_char
 
 
 class Font(File):
-
     @property
     def raw_data(self) -> bytes:
         page_bytes = b""
@@ -63,8 +62,10 @@ class Font(File):
     @staticmethod
     def from_stream(
         reader: BufferedReader | BytesIO,
-    ) -> Font:
-        data_type = DataType(int.from_bytes(reader.read(2)))
+        data_type: DataType | None = None,
+    ) -> "Font":
+        if data_type is None:
+            data_type = DataType(int.from_bytes(reader.read(2)))
 
         if data_type != DataType.MG1_FONT:
             raise ValueError("Font files must have MG1_FONT data type.")
@@ -81,7 +82,7 @@ class Font(File):
         return f
 
     @staticmethod
-    def from_file(file_path: Path) -> File:
+    def from_file(file_path: Path, data_type: DataType | None = None) -> File:
         xmlroot = ET.parse(file_path / EXPORT_FONT_METADATA_FILENAME).getroot()
         page_elements = xmlroot.findall("Page")
         page_bytes = b""

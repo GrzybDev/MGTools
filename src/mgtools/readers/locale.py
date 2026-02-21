@@ -42,8 +42,10 @@ class Locale(File):
     @staticmethod
     def from_stream(
         reader: BufferedReader | BytesIO,
-    ) -> Locale:
-        data_type = DataType(int.from_bytes(reader.read(2)))
+        data_type: DataType | None = None,
+    ) -> "Locale":
+        if data_type is None:
+            data_type = DataType(int.from_bytes(reader.read(2)))
 
         if data_type != DataType.SIMPLE:
             raise ValueError("Locale files must have SIMPLE data type.")
@@ -66,7 +68,10 @@ class Locale(File):
         return f
 
     @staticmethod
-    def from_file(file_path: Path) -> File:
+    def from_file(
+        file_path: Path,
+        data_type: DataType | None = None,
+    ) -> File:
         locale_bytes = b""
 
         # Load char substitution map if exists

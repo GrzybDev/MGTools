@@ -6,7 +6,6 @@ from mgtools.enumerators.data_type import DataType
 
 
 class File(ABC):
-
     @property
     def data_type(self) -> DataType:
         return self.__data_type
@@ -21,12 +20,18 @@ class File(ABC):
 
     @staticmethod
     @abstractmethod
-    def from_stream(reader: BufferedReader | BytesIO) -> File:
+    def from_stream(
+        reader: BufferedReader | BytesIO,
+        data_type: DataType | None = None,
+    ) -> "File":
         raise NotImplementedError()
 
     @staticmethod
     @abstractmethod
-    def from_file(file_path: Path) -> File:
+    def from_file(
+        file_path: Path,
+        data_type: DataType | None = None,
+    ) -> "File":
         raise NotImplementedError()
 
     @abstractmethod
