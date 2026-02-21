@@ -2,5 +2,5 @@ from enum import Enum
 
 
 class Game(Enum):
-    UNKNOWN = "Unknown"
     MG1 = "Metal Gear 1"
+    MG2 = "Metal Gear 2"

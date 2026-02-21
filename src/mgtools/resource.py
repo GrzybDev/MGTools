@@ -1,3 +1,5 @@
+import json
+from io import BytesIO
 from pathlib import Path
 
 from mgtools.constants import (
@@ -8,14 +10,31 @@ from mgtools.constants import (
     EXPORT_SPRITE_FOLDER,
     EXPORT_UNKNOWN_EXTENSION,
     EXPORT_UNKNOWN_FOLDER,
+    RESOURCE_MARKER,
+    RESOURCE_METADATA_FILENAME,
 )
 from mgtools.enumerators.data_type import DataType
 from mgtools.enumerators.file_type import FileType
 from mgtools.enumerators.game import Game
-from mgtools.enumerators.platform import Platform
 from mgtools.file import File
-from mgtools.mg1.constants import RESOURCE_FILES_COUNT, RESOURCE_MAGIC
-from mgtools.mg1.mappings import DATA_TYPE_MAP, FILE_NAME_MAP, FILE_TYPE_MAP
+from mgtools.mg1.constants import (
+    RESOURCE_IDENTIFIER as MG1_RESOURCE_IDENTIFIER,
+)
+from mgtools.mg1.constants import (
+    RESOURCE_SECTION_COUNT,
+)
+from mgtools.mg1.mappings import (
+    DATA_TYPE_MAP as MG1_DATA_TYPE_MAP,
+)
+from mgtools.mg1.mappings import (
+    FILE_TYPE_MAP as MG1_FILE_TYPE_MAP,
+)
+from mgtools.mg2.mappings import (
+    DATA_TYPE_MAP as MG2_DATA_TYPE_MAP,
+)
+from mgtools.mg2.mappings import (
+    FILE_TYPE_MAP as MG2_FILE_TYPE_MAP,
+)
 from mgtools.readers.font import Font
 from mgtools.readers.locale import Locale
 from mgtools.readers.palette import Palette
@@ -24,156 +43,249 @@ from mgtools.readers.unknown import UnknownFile
 
 
 class Resource:
-
-    __game: Game = Game.UNKNOWN
-    __platform: Platform = Platform.UNKNOWN
-
-    __files: list[File] = []
+    __game: Game
 
     @property
-    def file_count(self) -> int:
-        return len(self.__files)
+    def section_count(self) -> int:
+        return len(self.__sections)
 
-    def __init__(self, game: Game, platform: Platform) -> None:
+    def __init__(self, game: Game, header_bytes: bytes = b"\x00\x00") -> None:
         self.__game = game
-        self.__platform = platform
+        self.__header_bytes = header_bytes
+        self.__sections: list[File] = []
 
     def __str__(self) -> str:
-        return f"Resource(game={self.__game.name}, platform={self.__platform.name}, files_count={self.file_count})"
+        return f"Resource(game={self.__game.name}, section_count={self.section_count})"
+
+    def save_metadata(self, output_dir: Path) -> None:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        metadata_path = output_dir / RESOURCE_METADATA_FILENAME
+
+        metadata = {"game": self.__game.value}
+
+        with open(metadata_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, indent=2)
 
     @staticmethod
-    def from_file(file_path: Path) -> Resource:
+    def detect_game(input_dir: Path) -> Game:
+        metadata_path = input_dir / RESOURCE_METADATA_FILENAME
+
+        if not metadata_path.is_file():
+            raise FileNotFoundError(
+                f"Metadata file not found: {metadata_path}\n"
+                "This folder was not created by 'mgtools export' or the "
+                f"'{RESOURCE_METADATA_FILENAME}' file was deleted."
+            )
+
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
+
+        game_value = metadata.get("game")
+
+        try:
+            return Game(game_value)
+        except ValueError:
+            raise ValueError(f"Unknown game '{game_value}' in {metadata_path}")
+
+    @staticmethod
+    def from_file(file_path: Path) -> "Resource":
+        file_size = file_path.stat().st_size
+
         with open(file_path, "rb") as f:
-            resource_magic = f.read(2)
+            marker = f.read(1)[0]
 
-            if resource_magic == RESOURCE_MAGIC:
-                resource_game = Game.MG1
-                resource_files_count = RESOURCE_FILES_COUNT
+            if marker != RESOURCE_MARKER:
+                raise ValueError(f"Invalid resource marker: 0x{marker:02x}")
+
+            identifier = f.read(1)[0]
+
+            if identifier == MG1_RESOURCE_IDENTIFIER:
+                # MG1 format: marker + identifier + 2-byte header + sections
+                header_bytes = f.read(2)
+
+                res = Resource(Game.MG1, header_bytes=header_bytes)
+
+                for idx in range(RESOURCE_SECTION_COUNT):
+                    res.__read_mg1_section(idx, f)
             else:
-                raise ValueError("Cannot determine game from resource magic.")
+                # MG2 format: marker + 3-byte content size + sections
+                content_size = (identifier << 16) | int.from_bytes(f.read(2), "big")
 
-            resource_platform = Platform(int.from_bytes(f.read(2)))
+                if content_size != file_size - 4:
+                    raise ValueError(
+                        "Invalid MG2 resource file: content size mismatch."
+                    )
 
-            res = Resource(resource_game, resource_platform)
+                res = Resource(Game.MG2)
 
-            for idx in range(resource_files_count):
-                res.__read_chunk(idx, f)
+                while f.tell() < file_size:
+                    section_idx = len(res.__sections)
+                    res.__read_mg2_section(section_idx, f)
 
         return res
 
-    def __read_chunk(self, index, reader) -> None:
-        match self.__game:
-            case Game.MG1:
-                file_type = FILE_TYPE_MAP.get(index, FileType.UNKNOWN)
-            case _:
-                raise ValueError(f"Unsupported game: {self.__game}")
+    def __read_mg1_section(self, index, reader) -> None:
+        if self.__game != Game.MG1:
+            raise ValueError(f"Attempted to read MG1 section for game {self.__game}")
 
-        match file_type:
+        match MG1_FILE_TYPE_MAP.get(index, FileType.UNKNOWN):
             case FileType.SPRITE:
                 sprite = Sprite.from_stream(reader)
-                self.__files.append(sprite)
+                self.__sections.append(sprite)
             case FileType.PALETTE:
                 palette = Palette.from_stream(reader)
-                self.__files.append(palette)
+                self.__sections.append(palette)
             case FileType.LOCALE:
                 locale = Locale.from_stream(reader)
-                self.__files.append(locale)
+                self.__sections.append(locale)
             case FileType.FONT:
                 font = Font.from_stream(reader)
-                self.__files.append(font)
+                self.__sections.append(font)
             case _:
                 file = UnknownFile.from_stream(reader)
-                self.__files.append(file)
+                self.__sections.append(file)
 
-    def export(self, output_dir: Path, file_index: int, **kwargs) -> None:
-        file = self.__files[file_index]
+    def __read_mg2_section(self, index, reader) -> None:
+        if self.__game != Game.MG2:
+            raise ValueError(f"Attempted to read MG2 section for game {self.__game}")
 
-        match self.__game:
-            case Game.MG1:
-                file_type_map = FILE_TYPE_MAP
-                file_name_map = FILE_NAME_MAP
+        section_marker = reader.read(1)
+
+        if section_marker[0] != RESOURCE_MARKER:
+            raise ValueError(
+                f"Invalid MG2 section marker at index {index}: "
+                f"0x{section_marker[0]:02x}"
+            )
+
+        section_size = int.from_bytes(reader.read(3), "big")
+        section_data = reader.read(section_size)
+
+        file_type = MG2_FILE_TYPE_MAP.get(index, FileType.UNKNOWN)
+
+        match file_type:
+            case FileType.LOCALE:
+                locale = Locale.from_stream(
+                    BytesIO(section_data), data_type=DataType.MG2_SECTION
+                )
+                self.__sections.append(locale)
             case _:
-                raise ValueError(f"Unsupported game: {self.__game}")
+                file = UnknownFile.from_stream(
+                    BytesIO(section_data), data_type=DataType.MG2_SECTION
+                )
+                self.__sections.append(file)
 
-        file_name = file_name_map.get(file_index, f"{file_index:02d}")
+    def export(self, output_dir: Path, section_index: int, **kwargs) -> None:
+        file = self.__sections[section_index]
 
-        match file_type_map.get(file_index, FileType.UNKNOWN):
+        if self.__game == Game.MG1:
+            file_type_map = MG1_FILE_TYPE_MAP
+        elif self.__game == Game.MG2:
+            file_type_map = MG2_FILE_TYPE_MAP
+        else:
+            raise ValueError(f"Unsupported game: {self.__game}")
+
+        export_name = f"{section_index:02d}"
+
+        match file_type_map.get(section_index, FileType.UNKNOWN):
             case FileType.SPRITE:
-                file_name = f"{file_name}.{EXPORT_SPRITE_EXTENSION}"
-                file_path = output_dir / EXPORT_SPRITE_FOLDER
+                export_name = f"{export_name}.{EXPORT_SPRITE_EXTENSION}"
+                export_dir = output_dir / EXPORT_SPRITE_FOLDER
 
                 # Find loaded palette to export alongside sprite
-                for other_file in self.__files:
+                for other_file in self.__sections:
                     if isinstance(file, Sprite) and isinstance(other_file, Palette):
                         file.add_palette(other_file)
                         break
             case FileType.PALETTE:
-                file_name = f"{file_name}.{EXPORT_PALETTE_EXTENSION}"
-                file_path = output_dir
+                export_name = f"{export_name}.{EXPORT_PALETTE_EXTENSION}"
+                export_dir = output_dir
             case FileType.LOCALE:
-                file_name = ""
-                file_path = output_dir / EXPORT_LOCALE_FOLDER
+                export_name = ""
+                export_dir = output_dir / EXPORT_LOCALE_FOLDER
             case FileType.FONT:
-                file_name = ""
-                file_path = output_dir / EXPORT_FONT_FOLDER
+                export_name = ""
+                export_dir = output_dir / EXPORT_FONT_FOLDER
             case _:
-                file_name = f"{file_name}.{EXPORT_UNKNOWN_EXTENSION}"
-                file_path = output_dir / EXPORT_UNKNOWN_FOLDER
+                export_name = f"{export_name}.{EXPORT_UNKNOWN_EXTENSION}"
+                export_dir = output_dir / EXPORT_UNKNOWN_FOLDER
 
-        file_path.mkdir(parents=True, exist_ok=True)
-        file.export(file_path / file_name, **kwargs)
+        export_dir.mkdir(parents=True, exist_ok=True)
+        file.export(export_dir / export_name, **kwargs)
 
-    def add_from_folder(self, input_dir: Path, file_index: int) -> None:
-        match self.__game:
-            case Game.MG1:
-                data_type_map = DATA_TYPE_MAP
-                file_type_map = FILE_TYPE_MAP
-                file_name_map = FILE_NAME_MAP
-            case _:
-                raise ValueError(f"Unsupported game: {self.__game}")
+    def add_from_folder(self, input_dir: Path, section_index: int) -> None:
+        if self.__game == Game.MG1:
+            data_type_map = MG1_DATA_TYPE_MAP
+            file_type_map = MG1_FILE_TYPE_MAP
+        elif self.__game == Game.MG2:
+            data_type_map = MG2_DATA_TYPE_MAP
+            file_type_map = MG2_FILE_TYPE_MAP
+        else:
+            raise ValueError(f"Unsupported game: {self.__game}")
 
-        file_name = file_name_map.get(file_index, f"{file_index:02d}")
+        section_name = f"{section_index:02d}"
 
-        match file_type_map.get(file_index, FileType.UNKNOWN):
+        match file_type_map.get(section_index, FileType.UNKNOWN):
             case FileType.SPRITE:
-                file_name = f"{file_name}.{EXPORT_SPRITE_EXTENSION}"
-                file_path = input_dir / EXPORT_SPRITE_FOLDER
+                source_name = f"{section_name}.{EXPORT_SPRITE_EXTENSION}"
+                source_dir = input_dir / EXPORT_SPRITE_FOLDER
 
-                file = Sprite.from_file(file_path / file_name)
-                self.__files.append(file)
+                file = Sprite.from_file(source_dir / source_name)
+                self.__sections.append(file)
             case FileType.PALETTE:
-                file_name = f"{file_name}.{EXPORT_PALETTE_EXTENSION}"
-                file_path = input_dir
+                source_name = f"{section_name}.{EXPORT_PALETTE_EXTENSION}"
+                source_dir = input_dir
 
-                file = Palette.from_file(file_path / file_name)
-                self.__files.append(file)
+                file = Palette.from_file(source_dir / source_name)
+                self.__sections.append(file)
             case FileType.LOCALE:
-                file_path = input_dir / EXPORT_LOCALE_FOLDER
+                source_dir = input_dir / EXPORT_LOCALE_FOLDER
 
-                file = Locale.from_file(file_path)
-                self.__files.append(file)
+                if self.__game == Game.MG2:
+                    file = Locale.from_file(source_dir, data_type=DataType.MG2_SECTION)
+                else:
+                    file = Locale.from_file(source_dir)
+                self.__sections.append(file)
             case FileType.FONT:
-                file_path = input_dir / EXPORT_FONT_FOLDER
+                source_dir = input_dir / EXPORT_FONT_FOLDER
 
-                file = Font.from_file(file_path)
-                self.__files.append(file)
+                file = Font.from_file(source_dir)
+                self.__sections.append(file)
             case _:
-                file_name = f"{file_name}.{EXPORT_UNKNOWN_EXTENSION}"
-                file_path = input_dir / EXPORT_UNKNOWN_FOLDER
-                data_type = data_type_map.get(file_index, DataType.SIMPLE)
+                source_name = f"{section_name}.{EXPORT_UNKNOWN_EXTENSION}"
+                source_dir = input_dir / EXPORT_UNKNOWN_FOLDER
+                default_data_type = (
+                    DataType.MG2_SECTION if self.__game == Game.MG2 else DataType.SIMPLE
+                )
+                data_type = data_type_map.get(section_index, default_data_type)
 
-                file = UnknownFile.from_file(file_path / file_name, data_type=data_type)
-                self.__files.append(file)
+                file = UnknownFile.from_file(
+                    source_dir / source_name, data_type=data_type
+                )
+                self.__sections.append(file)
 
     def save(self, output_path: Path) -> None:
         with open(output_path, "wb") as f:
-            match self.__game:
-                case Game.MG1:
-                    f.write(RESOURCE_MAGIC)
-                case _:
-                    raise ValueError(f"Unsupported game: {self.__game}")
+            if self.__game == Game.MG1:
+                f.write(bytes([RESOURCE_MARKER, MG1_RESOURCE_IDENTIFIER]))
+                f.write(self.__header_bytes)
 
-            f.write(self.__platform.value.to_bytes(2))
+                for file in self.__sections:
+                    f.write(file.raw_data)
+            elif self.__game == Game.MG2:
+                # Collect all section data
+                content = b""
 
-            for file in self.__files:
-                f.write(file.raw_data)
+                for file in self.__sections:
+                    section_data = file.raw_data
+                    content += (
+                        bytes([RESOURCE_MARKER])
+                        + len(section_data).to_bytes(3, "big")
+                        + section_data
+                    )
+
+                # Write outer wrapper: marker + 3-byte content size
+                f.write(
+                    bytes([RESOURCE_MARKER]) + len(content).to_bytes(3, "big") + content
+                )
+            else:
+                raise ValueError(f"Unsupported game: {self.__game}")
