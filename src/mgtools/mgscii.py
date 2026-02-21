@@ -156,47 +156,57 @@ MGSCII_TABLE = {
 SPECIAL_CHARS = {99: "…", 135: "∞"}
 
 
+def _is_sjis_lead_byte(byte: int) -> bool:
+    """Check if a byte is a Shift-JIS lead byte."""
+    return (0x81 <= byte <= 0x9F) or (0xE0 <= byte <= 0xFC)
+
+
 def get_mgscii_char(code: int) -> str:
     return MGSCII_TABLE.get(code, "???")
 
 
 def read_mgscii_string(data: bytes) -> str:
     return_str = ""
+    i = 0
 
-    special_char_parsed = False
-    for byte in data:
-        if byte != 129 and not special_char_parsed:
-            return_str += get_mgscii_char(byte)
-        elif byte == 129 and not special_char_parsed:
-            special_char_parsed = True
-        elif special_char_parsed:
-            return_str += SPECIAL_CHARS.get(byte, "???")
-            special_char_parsed = False
+    while i < len(data):
+        byte = data[i]
+
+        if _is_sjis_lead_byte(byte) and i + 1 < len(data):
+            # Try two-byte Shift-JIS decode
+            pair = data[i : i + 2]
+            try:
+                return_str += pair.decode("shift_jis")
+                i += 2
+                continue
+            except (UnicodeDecodeError, ValueError):
+                pass
+
+        return_str += get_mgscii_char(byte)
+        i += 1
 
     return return_str
 
 
 def write_mgscii_string(
-    text: str, char_substition_map: dict[str, int] | None = None
+    text: str, char_substitution_map: dict[str, int] | None = None
 ) -> bytes:
     reverse_map = {v: k for k, v in MGSCII_TABLE.items()}
-    special_chars_map = {v: k for k, v in SPECIAL_CHARS.items()}
     return_bytes = bytearray()
 
     for char in text:
-        if char_substition_map and char in char_substition_map:
-            c = char_substition_map[char]
+        if char_substitution_map and char in char_substitution_map:
+            c = char_substitution_map[char]
         else:
             c = reverse_map.get(char)
 
-        if c is None:
-            c = 63  # 63 is the code for '?'
-
-        if c > 255:
-            if char in special_chars_map:
-                return_bytes.append(129)
-                return_bytes.append(special_chars_map[char])
-        else:
+        if c is not None and c <= 255:
             return_bytes.append(c)
+        else:
+            # Multi-byte or unmapped character - try Shift-JIS encoding
+            try:
+                return_bytes.extend(char.encode("shift_jis"))
+            except (UnicodeEncodeError, ValueError):
+                return_bytes.append(63)  # '?'
 
     return return_bytes
