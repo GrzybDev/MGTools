@@ -15,7 +15,7 @@ class UnknownFile(File):
         match self.data_type:
             case DataType.SIMPLE:
                 raw_bytes += len(self.__data[0]).to_bytes(2) + self.__data[0]
-            case DataType.WITH_COUNT:
+            case DataType.MULTI_ENTRY:
                 raw_bytes += (len(self.__data) * 2).to_bytes(2)
 
                 for entry in self.__data:
@@ -51,7 +51,7 @@ class UnknownFile(File):
                 data = reader.read(data_length)
 
                 f.add_data(file_data=data)
-            case DataType.WITH_COUNT:
+            case DataType.MULTI_ENTRY:
                 entries_count = int.from_bytes(reader.read(2)) // 2
 
                 for _ in range(entries_count):
