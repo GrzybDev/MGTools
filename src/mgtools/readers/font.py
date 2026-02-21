@@ -88,12 +88,12 @@ class Font(File):
         page_bytes = b""
 
         for page_idx, page in enumerate(page_elements):
-            altas_path = file_path / f"{page_idx}.{EXPORT_FONT_ATLAS_EXTENSION}"
+            atlas_path = file_path / f"{page_idx}.{EXPORT_FONT_ATLAS_EXTENSION}"
 
             glyphs_data = bytearray()
             bitmap_data = bytearray()
 
-            if not altas_path.exists():
+            if not atlas_path.exists():
                 page_glyphs_path = file_path / f"{page_idx}"
 
                 for glyph_element in page.findall("Glyph"):
