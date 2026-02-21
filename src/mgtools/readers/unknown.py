@@ -96,7 +96,11 @@ class UnknownFile(File):
 
         with open(file_path, "rb") as f:
             data = f.read()
-            return UnknownFile.from_stream(BytesIO(data), data_type=data_type)
+
+            if data_type == DataType.MG2_SECTION:
+                return UnknownFile.from_stream(BytesIO(data), data_type=data_type)
+
+            return UnknownFile.from_stream(BytesIO(data))
 
     def add_data(self, **kwargs) -> None:
         if "file_data" not in kwargs:
