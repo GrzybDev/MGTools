@@ -7,3 +7,4 @@ class FileType(Enum):
     SPRITE = 1
     LOCALE = 2
     FONT = 3
+    SPRITE_FRAMED = 4

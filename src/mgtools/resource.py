@@ -39,6 +39,7 @@ from mgtools.readers.font import Font
 from mgtools.readers.locale import Locale
 from mgtools.readers.palette import Palette
 from mgtools.readers.sprite import Sprite
+from mgtools.readers.sprite_framed import FramedSprite
 from mgtools.readers.unknown import UnknownFile
 
 
@@ -141,6 +142,9 @@ class Resource:
             case FileType.FONT:
                 font = Font.from_stream(reader)
                 self.__sections.append(font)
+            case FileType.SPRITE_FRAMED:
+                framed_sprite = FramedSprite.from_stream(reader)
+                self.__sections.append(framed_sprite)
             case _:
                 file = UnknownFile.from_stream(reader)
                 self.__sections.append(file)
@@ -186,7 +190,9 @@ class Resource:
 
         # Apply palette to sprites and tiles if a palette section exists
         for section in self.__sections:
-            if (isinstance(file, Sprite)) and isinstance(section, Palette):
+            if (isinstance(file, (Sprite, FramedSprite))) and isinstance(
+                section, Palette
+            ):
                 file.add_palette(section)
                 break
 
@@ -205,6 +211,9 @@ class Resource:
             case FileType.FONT:
                 export_name = ""
                 export_dir = output_dir / EXPORT_FONT_FOLDER
+            case FileType.SPRITE_FRAMED:
+                export_name = f"{export_name}.{EXPORT_SPRITE_EXTENSION}"
+                export_dir = output_dir / EXPORT_SPRITE_FOLDER
             case _:
                 export_name = f"{export_name}.{EXPORT_UNKNOWN_EXTENSION}"
                 export_dir = output_dir / EXPORT_UNKNOWN_FOLDER
@@ -251,6 +260,12 @@ class Resource:
                 source_dir = input_dir / EXPORT_FONT_FOLDER
 
                 file = Font.from_file(source_dir)
+                self.__sections.append(file)
+            case FileType.SPRITE_FRAMED:
+                source_name = f"{section_name}.{EXPORT_SPRITE_EXTENSION}"
+                source_dir = input_dir / EXPORT_SPRITE_FOLDER
+
+                file = FramedSprite.from_file(source_dir / source_name)
                 self.__sections.append(file)
             case _:
                 source_name = f"{section_name}.{EXPORT_UNKNOWN_EXTENSION}"

@@ -19,6 +19,7 @@ FILE_TYPE_MAP = {
     49: FileType.SPRITE,
     50: FileType.SPRITE,
     51: FileType.SPRITE,
+    52: FileType.SPRITE_FRAMED,
     53: FileType.SPRITE,
     54: FileType.SPRITE,
     55: FileType.SPRITE,
