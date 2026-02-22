@@ -5,7 +5,7 @@ from PIL import Image
 
 from mgtools.enumerators.data_type import DataType
 from mgtools.file import File
-from mgtools.readers.palette import Palette
+from mgtools.formats.palette import Palette
 
 
 class Sprite(File):

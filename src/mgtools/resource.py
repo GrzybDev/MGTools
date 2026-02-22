@@ -19,6 +19,13 @@ from mgtools.enumerators.data_type import DataType
 from mgtools.enumerators.file_type import FileType
 from mgtools.enumerators.game import Game
 from mgtools.file import File
+from mgtools.formats.font import Font
+from mgtools.formats.locale import Locale
+from mgtools.formats.palette import Palette
+from mgtools.formats.sprite import Sprite
+from mgtools.formats.sprite_framed import FramedSprite
+from mgtools.formats.texture import Texture
+from mgtools.formats.unknown import UnknownFile
 from mgtools.mg1.constants import (
     RESOURCE_IDENTIFIER as MG1_RESOURCE_IDENTIFIER,
 )
@@ -37,13 +44,6 @@ from mgtools.mg2.mappings import (
 from mgtools.mg2.mappings import (
     FILE_TYPE_MAP as MG2_FILE_TYPE_MAP,
 )
-from mgtools.readers.font import Font
-from mgtools.readers.locale import Locale
-from mgtools.readers.palette import Palette
-from mgtools.readers.sprite import Sprite
-from mgtools.readers.sprite_framed import FramedSprite
-from mgtools.readers.texture import Texture
-from mgtools.readers.unknown import UnknownFile
 
 
 class Resource:
