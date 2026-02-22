@@ -8,6 +8,8 @@ from mgtools.constants import (
     EXPORT_PALETTE_EXTENSION,
     EXPORT_SPRITE_EXTENSION,
     EXPORT_SPRITE_FOLDER,
+    EXPORT_TEXTURE_EXTENSION,
+    EXPORT_TEXTURE_FOLDER,
     EXPORT_UNKNOWN_EXTENSION,
     EXPORT_UNKNOWN_FOLDER,
     RESOURCE_MARKER,
@@ -40,6 +42,7 @@ from mgtools.readers.locale import Locale
 from mgtools.readers.palette import Palette
 from mgtools.readers.sprite import Sprite
 from mgtools.readers.sprite_framed import FramedSprite
+from mgtools.readers.texture import Texture
 from mgtools.readers.unknown import UnknownFile
 
 
@@ -145,6 +148,9 @@ class Resource:
             case FileType.SPRITE_FRAMED:
                 framed_sprite = FramedSprite.from_stream(reader)
                 self.__sections.append(framed_sprite)
+            case FileType.TEXTURE:
+                texture = Texture.from_stream(reader)
+                self.__sections.append(texture)
             case _:
                 file = UnknownFile.from_stream(reader)
                 self.__sections.append(file)
@@ -214,6 +220,9 @@ class Resource:
             case FileType.SPRITE_FRAMED:
                 export_name = f"{export_name}.{EXPORT_SPRITE_EXTENSION}"
                 export_dir = output_dir / EXPORT_SPRITE_FOLDER
+            case FileType.TEXTURE:
+                export_name = f"{export_name}.{EXPORT_TEXTURE_EXTENSION}"
+                export_dir = output_dir / EXPORT_TEXTURE_FOLDER
             case _:
                 export_name = f"{export_name}.{EXPORT_UNKNOWN_EXTENSION}"
                 export_dir = output_dir / EXPORT_UNKNOWN_FOLDER
@@ -266,6 +275,12 @@ class Resource:
                 source_dir = input_dir / EXPORT_SPRITE_FOLDER
 
                 file = FramedSprite.from_file(source_dir / source_name)
+                self.__sections.append(file)
+            case FileType.TEXTURE:
+                source_name = f"{section_name}.{EXPORT_TEXTURE_EXTENSION}"
+                source_dir = input_dir / EXPORT_TEXTURE_FOLDER
+
+                file = Texture.from_file(source_dir / source_name)
                 self.__sections.append(file)
             case _:
                 source_name = f"{section_name}.{EXPORT_UNKNOWN_EXTENSION}"

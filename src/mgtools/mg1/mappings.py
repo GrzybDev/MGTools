@@ -41,4 +41,5 @@ FILE_TYPE_MAP = {
     72: FileType.LOCALE,
     74: FileType.PALETTE,
     75: FileType.FONT,
+    76: FileType.TEXTURE,
 }
