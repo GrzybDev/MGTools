@@ -122,8 +122,8 @@ class Sprite(File):
     def add_palette(self, palette: Palette) -> None:
         palette_bytes = palette.palette_bytes
 
-        for i in range(len(self.__variants)):
-            self.__variants[i].putpalette(palette_bytes)
+        for variant in self.__variants:
+            variant.putpalette(palette_bytes)
 
     def export(self, output_path: Path, **kwargs) -> None:
         for i, variant in enumerate(self.__variants):
