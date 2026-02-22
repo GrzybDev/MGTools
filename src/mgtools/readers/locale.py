@@ -50,8 +50,8 @@ class Locale(File):
         if data_type is None:
             data_type = DataType(int.from_bytes(reader.read(2)))
 
-            if data_type != DataType.SIMPLE:
-                raise ValueError("Locale files must have SIMPLE data type.")
+            if data_type != DataType.MG1_SECTION:
+                raise ValueError("Locale files must have MG1_SECTION data type.")
 
             data_length = int.from_bytes(reader.read(2))
             data = BytesIO(reader.read(data_length))
@@ -139,7 +139,7 @@ class Locale(File):
             )
 
         chunk_data = BytesIO(
-            DataType.SIMPLE.value.to_bytes(2)
+            DataType.MG1_SECTION.value.to_bytes(2)
             + len(locale_bytes).to_bytes(2)
             + locale_bytes
         )

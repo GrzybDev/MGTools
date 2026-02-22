@@ -42,8 +42,8 @@ class Palette(File):
         if data_type is None:
             data_type = DataType(int.from_bytes(reader.read(2)))
 
-        if data_type != DataType.SIMPLE:
-            raise ValueError("Palette files must have SIMPLE data type.")
+        if data_type != DataType.MG1_SECTION:
+            raise ValueError("Palette files must have MG1_SECTION data type.")
 
         data_length = int.from_bytes(reader.read(2))
 
@@ -63,7 +63,7 @@ class Palette(File):
     def from_file(file_path: Path, data_type: DataType | None = None) -> "Palette":
         xmlroot = ET.parse(file_path).getroot()
 
-        f = Palette(data_type=data_type or DataType.SIMPLE)
+        f = Palette(data_type=data_type or DataType.MG1_SECTION)
 
         for color_elem in xmlroot.findall("Color"):
             r = int(color_elem.get("r", "0"))

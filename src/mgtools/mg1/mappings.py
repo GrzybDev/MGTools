@@ -2,7 +2,7 @@ from mgtools.enumerators.data_type import DataType
 from mgtools.enumerators.file_type import FileType
 
 DATA_TYPE_MAP = {
-    52: DataType.MULTI_ENTRY,
+    52: DataType.MG1_FRAMED,
     75: DataType.MG1_FONT,
     76: DataType.MG1_TEXTURE,
 }

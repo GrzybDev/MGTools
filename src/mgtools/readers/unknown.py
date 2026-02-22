@@ -18,9 +18,9 @@ class UnknownFile(File):
         raw_bytes = self.data_type.to_bytes(2)
 
         match self.data_type:
-            case DataType.SIMPLE:
+            case DataType.MG1_SECTION:
                 raw_bytes += len(self.__data[0]).to_bytes(2) + self.__data[0]
-            case DataType.MULTI_ENTRY:
+            case DataType.MG1_FRAMED:
                 raw_bytes += (len(self.__data) * 2).to_bytes(2)
 
                 for entry in self.__data:
@@ -49,12 +49,12 @@ class UnknownFile(File):
         f = UnknownFile(data_type)
 
         match data_type:
-            case DataType.SIMPLE:
+            case DataType.MG1_SECTION:
                 data_length = int.from_bytes(reader.read(2))
                 data = reader.read(data_length)
 
                 f.add_data(file_data=data)
-            case DataType.MULTI_ENTRY:
+            case DataType.MG1_FRAMED:
                 entries_count = int.from_bytes(reader.read(2)) // 2
 
                 for _ in range(entries_count):

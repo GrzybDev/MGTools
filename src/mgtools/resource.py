@@ -184,18 +184,18 @@ class Resource:
         else:
             raise ValueError(f"Unsupported game: {self.__game}")
 
+        # Apply palette to sprites and tiles if a palette section exists
+        for section in self.__sections:
+            if (isinstance(file, Sprite)) and isinstance(section, Palette):
+                file.add_palette(section)
+                break
+
         export_name = f"{section_index:02d}"
 
         match file_type_map.get(section_index, FileType.UNKNOWN):
             case FileType.SPRITE:
                 export_name = f"{export_name}.{EXPORT_SPRITE_EXTENSION}"
                 export_dir = output_dir / EXPORT_SPRITE_FOLDER
-
-                # Find loaded palette to export alongside sprite
-                for other_file in self.__sections:
-                    if isinstance(file, Sprite) and isinstance(other_file, Palette):
-                        file.add_palette(other_file)
-                        break
             case FileType.PALETTE:
                 export_name = f"{export_name}.{EXPORT_PALETTE_EXTENSION}"
                 export_dir = output_dir
@@ -214,9 +214,11 @@ class Resource:
 
     def add_from_folder(self, input_dir: Path, section_index: int) -> None:
         if self.__game == Game.MG1:
+            default_data_type = DataType.MG1_SECTION
             data_type_map = MG1_DATA_TYPE_MAP
             file_type_map = MG1_FILE_TYPE_MAP
         elif self.__game == Game.MG2:
+            default_data_type = DataType.MG2_SECTION
             data_type_map = MG2_DATA_TYPE_MAP
             file_type_map = MG2_FILE_TYPE_MAP
         else:
@@ -253,9 +255,6 @@ class Resource:
             case _:
                 source_name = f"{section_name}.{EXPORT_UNKNOWN_EXTENSION}"
                 source_dir = input_dir / EXPORT_UNKNOWN_FOLDER
-                default_data_type = (
-                    DataType.MG2_SECTION if self.__game == Game.MG2 else DataType.SIMPLE
-                )
                 data_type = data_type_map.get(section_index, default_data_type)
 
                 file = UnknownFile.from_file(
