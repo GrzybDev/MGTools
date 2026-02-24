@@ -5,12 +5,9 @@ from pathlib import Path
 import typer
 from PIL import Image
 
+from mgtools.constants import TXTR_ALIGNMENT, TXTR_HEADER_SIZE, TXTR_MAGIC
 from mgtools.dataclasses.ctxr_header import CtxrHeader
 from mgtools.dataclasses.ctxr_miplevel import CtxrMipLevel
-
-MAGIC = b"TXTR"
-HEADER_SIZE = 0x84
-ALIGNMENT = 32
 
 
 class Ctxr:
@@ -29,7 +26,7 @@ class Ctxr:
         return n > 0 and (n & (n - 1)) == 0
 
     @staticmethod
-    def _align(offset: int, alignment: int = ALIGNMENT) -> int:
+    def _align(offset: int, alignment: int = TXTR_ALIGNMENT) -> int:
         return ((offset + alignment - 1) // alignment) * alignment
 
     @classmethod
@@ -41,12 +38,12 @@ class Ctxr:
     @classmethod
     def from_bytes(cls, data: bytes) -> "Ctxr":
         # Parse CTXR from raw bytes.
-        if len(data) < HEADER_SIZE:
+        if len(data) < TXTR_HEADER_SIZE:
             raise ValueError("File too small to be a valid CTXR.")
 
-        if data[0:4] != MAGIC:
+        if data[0:4] != TXTR_MAGIC:
             raise ValueError(
-                f"Not a valid CTXR file (expected magic {MAGIC!r}, got {data[0:4]!r})."
+                f"Not a valid CTXR file (expected magic {TXTR_MAGIC!r}, got {data[0:4]!r})."
             )
 
         header = CtxrHeader(
@@ -111,7 +108,7 @@ class Ctxr:
         buf = BytesIO()
 
         # Magic
-        buf.write(MAGIC)
+        buf.write(TXTR_MAGIC)
         # Header fields (big-endian)
         buf.write(self.header.padding.to_bytes(2))
         buf.write(self.header.version.to_bytes(2))
