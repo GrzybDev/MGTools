@@ -8,6 +8,7 @@ from mgtools.ctxr import export_ctxr, import_ctxr
 from mgtools.enumerators.game import Game
 from mgtools.mg1.constants import RESOURCE_SECTION_COUNT as MG1_SECTION_COUNT
 from mgtools.mg2.constants import RESOURCE_SECTION_COUNT as MG2_SECTION_COUNT
+from mgtools.mgs_font import export_mgs_font, import_mgs_font
 from mgtools.resource import Resource
 
 app = typer.Typer(help="Tools for modding PC ports of Metal Gear / Metal Gear 2")
@@ -21,6 +22,14 @@ app.add_typer(
 )
 ctxr_app = typer.Typer(help="Tools for working with ctxr textures")
 app.add_typer(ctxr_app, name="ctxr", help="Tools for working with ctxr textures")
+mgs_font_app = typer.Typer(
+    help="Tools for working with MGS font files (MGS_Font_nht.raw)"
+)
+app.add_typer(
+    mgs_font_app,
+    name="mgs-font",
+    help="Tools for working with MGS font files (MGS_Font.raw, MGS_Font_nht.raw)",
+)
 
 
 @res_app.command(
@@ -115,3 +124,37 @@ def ctxr_import(
                 continue
 
             import_ctxr(png_file, output_dir)
+
+
+@mgs_font_app.command(
+    "export", help="Export MGS font file to a folder with glyph images and metadata."
+)
+def mgs_font_export(
+    input_file: Annotated[
+        Path, typer.Argument(exists=True, file_okay=True, readable=True)
+    ],
+    output_dir: Annotated[
+        Path | None, typer.Argument(file_okay=False, writable=True)
+    ] = None,
+):
+    if output_dir is None:
+        output_dir = input_file.parent / input_file.stem
+
+    export_mgs_font(input_file, output_dir)
+
+
+@mgs_font_app.command(
+    "import", help="Import glyph images and metadata back into MGS font file."
+)
+def mgs_font_import(
+    input_dir: Annotated[
+        Path, typer.Argument(exists=True, dir_okay=True, readable=True)
+    ],
+    output_file: Annotated[
+        Path | None, typer.Argument(file_okay=True, writable=True)
+    ] = None,
+):
+    if output_file is None:
+        output_file = input_dir.parent / f"{input_dir.name}.raw"
+
+    import_mgs_font(input_dir, output_file)
