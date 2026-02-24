@@ -9,12 +9,21 @@ from mgtools.mg2.constants import RESOURCE_SECTION_COUNT as MG2_SECTION_COUNT
 from mgtools.resource import Resource
 
 app = typer.Typer(help="Tools for modding PC ports of Metal Gear / Metal Gear 2")
-
-
-@app.command(
-    help="Export resources from specified resource file. (English.bin, English.raw etc.)"
+res_app = typer.Typer(
+    help="Tools for working with resource files (English.bin, English.raw etc.)"
 )
-def export(
+app.add_typer(
+    res_app,
+    name="resource",
+    help="Tools for working with resource files (English.bin, English.raw etc.)",
+)
+
+
+@res_app.command(
+    "export",
+    help="Export resources from specified resource file. (English.bin, English.raw etc.)",
+)
+def resource_export(
     input_file: Annotated[
         Path, typer.Argument(exists=True, file_okay=True, readable=True)
     ],
@@ -36,8 +45,8 @@ def export(
         resource.export(output_dir, index, separate_chars=separate_chars)
 
 
-@app.command(help="Generate new resource file from specified folder.")
-def generate(
+@res_app.command("generate", help="Generate new resource file from specified folder.")
+def resource_generate(
     input_dir: Annotated[Path, typer.Argument(dir_okay=True, readable=True)],
     output_file: Annotated[
         Path | None, typer.Argument(file_okay=True, writable=True)
