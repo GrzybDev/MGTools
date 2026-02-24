@@ -1,8 +1,10 @@
+import re
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from mgtools.ctxr import export_ctxr, import_ctxr
 from mgtools.enumerators.game import Game
 from mgtools.mg1.constants import RESOURCE_SECTION_COUNT as MG1_SECTION_COUNT
 from mgtools.mg2.constants import RESOURCE_SECTION_COUNT as MG2_SECTION_COUNT
@@ -17,6 +19,8 @@ app.add_typer(
     name="resource",
     help="Tools for working with resource files (English.bin, English.raw etc.)",
 )
+ctxr_app = typer.Typer(help="Tools for working with ctxr textures")
+app.add_typer(ctxr_app, name="ctxr", help="Tools for working with ctxr textures")
 
 
 @res_app.command(
@@ -68,3 +72,46 @@ def resource_generate(
         resource.add_from_folder(input_dir, index)
 
     resource.save(output_file)
+
+
+@ctxr_app.command("export", help="Export ctxr texture(s) to PNG files.")
+def ctxr_export(
+    input_file_or_dir: Annotated[Path, typer.Argument(exists=True, readable=True)],
+    output_dir: Annotated[
+        Path | None, typer.Argument(file_okay=False, writable=True)
+    ] = None,
+):
+    if output_dir is None:
+        output_dir = input_file_or_dir.parent
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if input_file_or_dir.is_file():
+        output_file = output_dir / f"{input_file_or_dir.stem}.png"
+        export_ctxr(input_file_or_dir, output_file)
+    else:
+        for ctxr_file in input_file_or_dir.glob("*.ctxr"):
+            output_file = output_dir / f"{ctxr_file.stem}.png"
+            export_ctxr(ctxr_file, output_file)
+
+
+@ctxr_app.command("import", help="Import PNG file(s) back to ctxr texture(s).")
+def ctxr_import(
+    input_file_or_dir: Annotated[Path, typer.Argument(exists=True, readable=True)],
+    output_dir: Annotated[
+        Path | None, typer.Argument(file_okay=False, writable=True)
+    ] = None,
+):
+    if output_dir is None:
+        output_dir = input_file_or_dir.parent
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if input_file_or_dir.is_file():
+        import_ctxr(input_file_or_dir, output_dir)
+    else:
+        for png_file in input_file_or_dir.glob("*.png"):
+            if re.search(r"\.mip\d+\.png$", png_file.name):
+                continue
+
+            import_ctxr(png_file, output_dir)
