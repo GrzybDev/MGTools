@@ -3,6 +3,7 @@ from typing import Annotated
 
 import typer
 
+from mgtools.dataclasses.locale_format import LocaleFormat
 from mgtools.enumerators.game import Game
 from mgtools.mg1.constants import RESOURCE_SECTION_COUNT as MG1_SECTION_COUNT
 from mgtools.mg2.constants import RESOURCE_SECTION_COUNT as MG2_SECTION_COUNT
@@ -28,6 +29,12 @@ def resource_export(
         bool,
         typer.Option(help="Export font glyphs as separate images instead of an atlas."),
     ] = False,
+    locale_format: Annotated[
+        LocaleFormat,
+        typer.Option(
+            help="Format to export locale text blocks in. XLIFF is more widely supported, but XLIFF2 is more compact and easier to work with."
+        ),
+    ] = LocaleFormat.XLF,
 ):
     if output_dir is None:
         output_dir = input_file.parent / input_file.stem
@@ -36,7 +43,12 @@ def resource_export(
     resource.save_metadata(output_dir)
 
     for index in range(resource.section_count):
-        resource.export(output_dir, index, separate_chars=separate_chars)
+        resource.export(
+            output_dir,
+            index,
+            separate_chars=separate_chars,
+            locale_format=locale_format,
+        )
 
 
 @app.command("generate", help="Generate new resource file from specified folder.")

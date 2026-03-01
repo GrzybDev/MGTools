@@ -2,12 +2,14 @@ import json
 from io import BufferedReader, BytesIO
 from pathlib import Path
 
-import polib
+from translate.storage import po, xliff, xliff2
+from translate.storage.xliff import ID_SEPARATOR
 
 from mgtools.constants import (
     EXPORT_LOCALE_CHAR_SUBSTITUTION_MAP_FILENAME,
     EXPORT_LOCALE_RAW_FOLDER,
 )
+from mgtools.dataclasses.locale_format import LocaleFormat
 from mgtools.enumerators.data_type import DataType
 from mgtools.file import File
 from mgtools.mgscii import read_mgscii_string, write_mgscii_string
@@ -22,7 +24,7 @@ class Locale(File):
         for block_idx in sorted(self.__blocks.keys()):
             block_data = self.__blocks[block_idx]
 
-            if isinstance(block_data, polib.POFile):
+            if isinstance(block_data, list):
                 block_bytes = self.__build_text_block(block_data, mg2=mg2)
             elif isinstance(block_data, bytes):
                 block_bytes = block_data
@@ -40,7 +42,7 @@ class Locale(File):
 
     def __init__(self, data_type: DataType) -> None:
         super().__init__(data_type)
-        self.__blocks: dict[int, bytes | polib.POFile] = {}
+        self.__blocks: dict[int, bytes | list[str]] = {}
 
     @staticmethod
     def from_stream(
@@ -95,24 +97,38 @@ class Locale(File):
             with open(char_substitution_map_path, "r", encoding="utf-8") as f:
                 char_substitution_map = json.load(f)
 
+        text_groups = []
+        if (file_path / "locale.xliff").exists():
+            storage = xliff.Xliff1File().parsefile(str(file_path / "locale.xliff"))
+            file_format = LocaleFormat.XLIFF
+            text_groups = storage.getfilenames()
+        elif (file_path / "locale.xlf").exists():
+            storage = xliff2.Xliff2File().parsefile(str(file_path / "locale.xlf"))
+            file_format = LocaleFormat.XLF
+            text_groups = storage.getfilenames()
+        else:
+            file_format = LocaleFormat.PO
+
         idx = 0
-        while (file_path / f"{idx:02d}.po").exists() or (
-            file_path / EXPORT_LOCALE_RAW_FOLDER / f"{idx:02d}.bin"
-        ).exists():
+        while (
+            (file_path / f"{idx:02d}.po").exists() or f"block_{idx:02d}" in text_groups
+        ) or (file_path / EXPORT_LOCALE_RAW_FOLDER / f"{idx:02d}.bin").exists():
             po_path = file_path / f"{idx:02d}.po"
             bin_path = file_path / EXPORT_LOCALE_RAW_FOLDER / f"{idx:02d}.bin"
 
-            if po_path.exists():
-                po = polib.pofile(str(po_path))
+            if file_format == LocaleFormat.PO and po_path.exists():
+                storage = po.pofile().parsefile(str(po_path))
 
                 block_stream = BytesIO()
 
-                for entry in po:
-                    if not mg2:
-                        string_flag = int(entry.flags[0]) if entry.flags else 0
-                        block_stream.write(string_flag.to_bytes(1))
+                for unit in storage.units:
+                    if unit.isheader():
+                        continue
 
-                    string_unicode = entry.msgstr or entry.msgid
+                    if not mg2:
+                        block_stream.write((0).to_bytes(1))
+
+                    string_unicode = unit.target or unit.source
 
                     string_data = write_mgscii_string(
                         string_unicode, char_substitution_map
@@ -121,6 +137,56 @@ class Locale(File):
 
                     block_stream.write(string_length.to_bytes(2))
                     block_stream.write(string_data)
+
+                block_data = block_stream.getvalue()
+            elif (
+                file_format in (LocaleFormat.XLIFF, LocaleFormat.XLF)
+                and f"block_{idx:02d}" in text_groups
+            ):
+                units = storage.units  # type: ignore
+
+                block_stream = BytesIO()
+
+                if file_format == LocaleFormat.XLIFF:
+                    for unit in units:
+                        if unit.isheader():
+                            continue
+
+                        if unit.getid().split(ID_SEPARATOR, 1)[0] != f"block_{idx:02d}":
+                            continue
+
+                        if not mg2:
+                            block_stream.write((0).to_bytes(1))
+
+                        string_unicode = unit.target or unit.source
+
+                        string_data = write_mgscii_string(
+                            string_unicode, char_substitution_map
+                        )
+                        string_length = len(string_data)
+
+                        block_stream.write(string_length.to_bytes(2))
+                        block_stream.write(string_data)
+                elif file_format == LocaleFormat.XLF:
+                    for unit in units:
+                        if unit.isheader():
+                            continue
+
+                        if unit.getid().split(":", 1)[0] != f"block_{idx:02d}":
+                            continue
+
+                        if not mg2:
+                            block_stream.write((0).to_bytes(1))
+
+                        string_unicode = unit.target or unit.source
+
+                        string_data = write_mgscii_string(
+                            string_unicode, char_substitution_map
+                        )
+                        string_length = len(string_data)
+
+                        block_stream.write(string_length.to_bytes(2))
+                        block_stream.write(string_data)
 
                 block_data = block_stream.getvalue()
             elif bin_path.exists():
@@ -175,9 +241,9 @@ class Locale(File):
 
         return stream.tell() == len(block_data)
 
-    def __parse_text_block(self, block_data: bytes, mg2: bool = False) -> polib.POFile:
-        po = polib.POFile()
+    def __parse_text_block(self, block_data: bytes, mg2: bool = False) -> list[str]:
         block_stream = BytesIO(block_data)
+        parsed_block = []
 
         while block_stream.tell() < len(block_data):
             if mg2:
@@ -185,38 +251,28 @@ class Locale(File):
                 if len(raw_len) < 2:
                     break
                 string_length = int.from_bytes(raw_len)
-                string_flag = 0
             else:
                 raw_flag = block_stream.read(1)
                 if len(raw_flag) < 1:
                     break
-                string_flag = int.from_bytes(raw_flag)
                 string_length = int.from_bytes(block_stream.read(2))
 
             if string_length == 0:
                 break
 
             string_data = read_mgscii_string(block_stream.read(string_length))
+            parsed_block.append(string_data)
 
-            po.append(
-                polib.POEntry(
-                    msgid=string_data,
-                    msgstr="",
-                    flags=[str(string_flag)] if not mg2 else [],
-                )
-            )
+        return parsed_block
 
-        return po
-
-    def __build_text_block(self, po: polib.POFile, mg2: bool = False) -> bytes:
+    def __build_text_block(self, data: list[str], mg2: bool = False) -> bytes:
         block_stream = BytesIO()
 
-        for entry in po:
+        for entry in data:
             if not mg2:
-                string_flag = int(entry.flags[0]) if entry.flags else 0
-                block_stream.write(string_flag.to_bytes(1))
+                block_stream.write((0).to_bytes(1))
 
-            string_data = write_mgscii_string(entry.msgstr or entry.msgid)
+            string_data = write_mgscii_string(entry)
             string_length = len(string_data)
 
             block_stream.write(string_length.to_bytes(2))
@@ -242,10 +298,62 @@ class Locale(File):
 
         scripts_dir = output_path / EXPORT_LOCALE_RAW_FOLDER
 
+        locale_format = kwargs.get("locale_format")
+
+        if locale_format is None:
+            raise ValueError("Missing 'locale_format' in export kwargs.")
+
+        match locale_format:
+            case LocaleFormat.XLIFF:
+                storage = xliff.Xliff1File()
+                unit_class = xliff.Xliff1Unit
+            case LocaleFormat.XLF:
+                storage = xliff2.Xliff2File()
+                unit_class = xliff2.Xliff2Unit
+
+                root = storage.document.getroot()
+
+                for child in root.getchildren():
+                    if child.get("id") == "f1":
+                        root.remove(child)
+            case LocaleFormat.PO:
+                storage = po.pofile()
+                unit_class = po.pounit
+            case _:
+                raise ValueError(f"Unsupported locale format: {locale_format}")
+
         for block_idx, block_data in self.__blocks.items():
-            if isinstance(block_data, polib.POFile):
-                block_data.save(str(output_path / f"{block_idx:02d}.po"))
+            if isinstance(block_data, list):
+                if locale_format == LocaleFormat.XLIFF:
+                    storage.switchfile(f"block_{block_idx:02d}", createifmissing=True)  # type: ignore
+                    current_container = storage
+                elif locale_format == LocaleFormat.XLF:
+                    new_file_node = storage.createfilenode(f"block_{block_idx:02d}")  # type: ignore
+                    storage.document.getroot().append(new_file_node)  # type: ignore
+                    current_container = new_file_node
+                else:
+                    storage = po.pofile()  # type: ignore
+                    current_container = storage
+
+                for source_text in block_data:
+                    unit = unit_class(source=source_text)
+
+                    if locale_format == LocaleFormat.XLF:
+                        current_container.append(unit.xmlelement)  # type: ignore
+                    else:
+                        current_container.addunit(unit)  # type: ignore
+
+                if locale_format not in (LocaleFormat.XLIFF, LocaleFormat.XLF):
+                    storage.savefile(
+                        str(
+                            output_path
+                            / f"{block_idx:02d}.{locale_format.name.lower()}"
+                        )
+                    )
             elif isinstance(block_data, bytes):
                 scripts_dir.mkdir(parents=True, exist_ok=True)
                 with open(scripts_dir / f"{block_idx:02d}.bin", "wb") as f:
                     f.write(block_data)
+
+        if locale_format in (LocaleFormat.XLIFF, LocaleFormat.XLF):
+            storage.savefile(str(output_path / f"locale.{locale_format.name.lower()}"))

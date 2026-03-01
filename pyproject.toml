@@ -13,15 +13,12 @@ license-files = [
 requires-python = ">=3.10"
 dependencies = [
     "pillow>=12.1.1",
-    "polib",
+    "translate-toolkit>=3.17.5",
     "typer>=0.24.0",
 ]
 
 [tool.uv]
 package = true
-
-[tool.uv.sources]
-polib = { git = "https://github.com/GrzybDev/polib.git", rev = "state-machine-fix" }
 
 [project.scripts]
 mgtools = "mgtools:app"
