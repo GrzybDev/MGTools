@@ -105,7 +105,7 @@ class Sprite(Asset):
 
             self.__variants.append(decode_sprite_entry(reader.read(data_length)))
 
-    def add_palette(self, palette: Palette) -> None:
+    def add_palette(self, palette: "Palette | bytes") -> None:
         apply_palette(self.__variants, palette)
 
     def export(self, output_path: Path, **kwargs) -> None:

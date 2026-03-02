@@ -34,9 +34,12 @@ def decode_sprite_entry(data: bytes) -> Image.Image:
     return Image.frombytes("P", (width, height), pixel_data)
 
 
-def apply_palette(images: list[Image.Image], palette: Palette) -> None:
-    """Apply a Palette to every image in the list."""
-    palette_bytes = palette.palette_bytes
+def apply_palette(images: list[Image.Image], palette: "Palette | bytes") -> None:
+    """Apply a Palette (or raw palette bytes) to every image in the list."""
+    if isinstance(palette, bytes):
+        palette_bytes = palette
+    else:
+        palette_bytes = palette.palette_bytes
 
     for image in images:
         image.putpalette(palette_bytes)

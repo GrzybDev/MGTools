@@ -219,7 +219,11 @@ class Resource:
         if isinstance(file, (Sprite, FramedSprite)):
             for section in self.__sections:
                 if isinstance(section, Palette):
-                    file.add_palette(section)
+                    if self.__game == Game.MG2:
+                        palette_bytes = self.__build_mg2_palette(section_index, section)
+                        file.add_palette(palette_bytes)
+                    else:
+                        file.add_palette(section)
                     break
 
         file_type = file_type_map.get(section_index, FileType.UNKNOWN)
@@ -242,6 +246,79 @@ class Resource:
         if self.__game == Game.MG2:
             return MG2_FILE_TYPE_MAP
         raise ValueError(f"Unsupported game: {self.__game}")
+
+    def __build_mg2_palette(self, section_index: int, palette: Palette) -> bytes:
+        """Build a 256-color palette for a specific MG2 sprite section.
+
+        Section 24 uses a combined palette from two large blocks covering
+        indices 0-90 and 96-206. Sections 25-45 each use a single block
+        whose colors start at index 192.
+        """
+        from mgtools.mg2.mappings import (
+            MG2_PALETTE_SECTION_24_BLOCKS,
+            MG2_PALETTE_SPRITE_OFFSET,
+        )
+
+        if section_index == 24:
+            return palette.build_palette_bytes(MG2_PALETTE_SECTION_24_BLOCKS)
+
+        # Sections 25-45: find a palette block whose size matches the
+        # number of contiguous colour indices this section uses at 192+.
+        file_type_map = self.__get_file_type_map()
+        sprite_sections = sorted(
+            idx
+            for idx, ft in file_type_map.items()
+            if ft == FileType.SPRITE and idx != 24
+        )
+
+        # Determine how many colours this section needs
+        section_file = self.__sections[section_index]
+        needed = 0
+        if hasattr(section_file, "_Sprite__variants"):
+            all_unique: set[int] = set()
+            for v in section_file._Sprite__variants:  # type: ignore[attr-defined]
+                all_unique.update(v.tobytes())
+            needed = len([x for x in all_unique if x >= MG2_PALETTE_SPRITE_OFFSET])
+
+        # Reserve large blocks (section-24 group)
+        used: set[int] = set()
+        for bi, _ in MG2_PALETTE_SECTION_24_BLOCKS:
+            used.add(bi)
+        # Also reserve all blocks whose first colour is magenta (255,0,255)
+        # — these are section-24 palette components.
+        for bi in range(palette.block_count):
+            block_colors = palette._Palette__color_blocks[bi]  # type: ignore[attr-defined]
+            if block_colors and block_colors[0] == (255, 0, 255):
+                used.add(bi)
+
+        # Greedy first-fit: iterate over sprite sections in order (25-45).
+        # For each section, consume the first unused block with matching size.
+        assigned: dict[int, int] = {}
+        for sec in sprite_sections:
+            sec_file = self.__sections[sec]
+            sec_needed = 0
+            if hasattr(sec_file, "_Sprite__variants"):
+                sec_unique: set[int] = set()
+                for v in sec_file._Sprite__variants:  # type: ignore[attr-defined]
+                    sec_unique.update(v.tobytes())
+                sec_needed = len(
+                    [x for x in sec_unique if x >= MG2_PALETTE_SPRITE_OFFSET]
+                )
+            for bi in range(palette.block_count):
+                if bi in used:
+                    continue
+                if palette.get_block_size(bi) == sec_needed:
+                    assigned[sec] = bi
+                    used.add(bi)
+                    break
+
+        if section_index in assigned:
+            return palette.build_palette_bytes(
+                [(assigned[section_index], MG2_PALETTE_SPRITE_OFFSET)]
+            )
+
+        # Fallback: use the flat palette
+        return palette.palette_bytes
 
     def add_from_folder(self, input_dir: Path, section_index: int, **kwargs) -> None:
         if self.__game == Game.MG1:

@@ -41,6 +41,37 @@ class Palette(Asset):
 
         return palette
 
+    @property
+    def block_count(self) -> int:
+        return len(self.__color_blocks)
+
+    def get_block_size(self, block_index: int) -> int:
+        return len(self.__color_blocks[block_index])
+
+    def build_palette_bytes(self, block_offsets: list[tuple[int, int]]) -> bytes:
+        """Build a 256-color RGB palette from specific blocks at given offsets.
+
+        Args:
+            block_offsets: List of (block_index, start_offset) pairs.
+                Each block's colors are placed starting at start_offset
+                in the 256-entry palette.
+
+        Returns:
+            768 bytes of RGB palette data (256 * 3).
+        """
+        palette: list[tuple[int, int, int]] = [(0, 0, 0)] * 256
+
+        for block_index, start_offset in block_offsets:
+            for i, color in enumerate(self.__color_blocks[block_index]):
+                idx = start_offset + i
+                if 0 <= idx < 256:
+                    palette[idx] = color
+
+        result = b""
+        for r, g, b in palette:
+            result += bytes([r, g, b])
+        return result
+
     def __init__(self, data_type: DataType) -> None:
         super().__init__(data_type)
         self.__colors: list[tuple[int, int, int]] = []
