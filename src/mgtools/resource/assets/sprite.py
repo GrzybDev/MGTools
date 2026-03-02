@@ -19,6 +19,10 @@ class Sprite(Asset):
     @property
     def raw_data(self) -> bytes:
         data = b"".join(encode_sprite_image(v) for v in self.__variants)
+
+        if self.data_type == DataType.MG2_SECTION:
+            return data
+
         data += (0).to_bytes(4)  # End of data marker
         return self.data_type.to_bytes(2) + len(data).to_bytes(2) + data
 
@@ -32,6 +36,11 @@ class Sprite(Asset):
     ) -> Asset:
         if data_type is None:
             data_type = DataType(int.from_bytes(reader.read(2)))
+
+        if data_type == DataType.MG2_SECTION:
+            f = Sprite(data_type=data_type)
+            f.add_data(reader=reader)
+            return f
 
         if data_type != DataType.MG1_SECTION:
             raise ValueError("Sprite files must have MG1_SECTION data type.")
@@ -68,6 +77,11 @@ class Sprite(Asset):
             sprite_bytes += encode_sprite_file(file_path)
 
         sprite_bytes += (0).to_bytes(4)  # End of data marker
+
+        if data_type == DataType.MG2_SECTION:
+            return Sprite.from_stream(
+                BytesIO(sprite_bytes), data_type=DataType.MG2_SECTION
+            )
 
         return Sprite.from_stream(
             BytesIO(

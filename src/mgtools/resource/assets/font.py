@@ -80,6 +80,9 @@ class Font(Asset):
             page_data = glyphs_data + bitmap_data
             page_bytes += len(page_data).to_bytes(4) + page_data
 
+        if self.data_type == DataType.MG2_SECTION:
+            return page_bytes
+
         return self.data_type.to_bytes(2) + self.__identifier + page_bytes
 
     def __init__(self, data_type: DataType) -> None:
@@ -95,6 +98,18 @@ class Font(Asset):
     ) -> Asset:
         if data_type is None:
             data_type = DataType(int.from_bytes(reader.read(2)))
+
+        if data_type == DataType.MG2_SECTION:
+            f = Font(data_type=data_type)
+
+            for idx in range(5):
+                page_size = int.from_bytes(reader.read(4))
+                page_data = reader.read(page_size)
+                f.add_data(
+                    page_data=BytesIO(page_data), page_index=idx, page_size=page_size
+                )
+
+            return f
 
         if data_type != DataType.MG1_FONT:
             raise ValueError("Font files must have MG1_FONT data type.")
@@ -279,6 +294,9 @@ class Font(Asset):
                     + glyphs_data
                     + bitmap_data
                 )
+
+        if data_type == DataType.MG2_SECTION:
+            return Font.from_stream(BytesIO(page_bytes), data_type=DataType.MG2_SECTION)
 
         return Font.from_stream(
             BytesIO(DataType.MG1_FONT.to_bytes(2) + identifier + page_bytes)

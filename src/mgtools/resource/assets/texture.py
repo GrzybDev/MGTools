@@ -10,6 +10,12 @@ from mgtools.resource.asset import Asset
 class Texture(Asset):
     @property
     def raw_data(self) -> bytes:
+        if self.data_type == DataType.MG2_SECTION:
+            raw_bytes = b""
+            for layer in self.__layers:
+                raw_bytes += self.__get_texture_bytes(layer)
+            return raw_bytes
+
         raw_bytes = self.data_type.to_bytes(2)
         raw_bytes += self.__identifier
 
@@ -29,6 +35,12 @@ class Texture(Asset):
     ) -> Asset:
         if data_type is None:
             data_type = DataType(int.from_bytes(reader.read(2)))
+
+        if data_type == DataType.MG2_SECTION:
+            f = Texture(data_type=data_type)
+            f.add_data(reader=reader)
+            f.add_data(reader=reader)
+            return f
 
         if data_type != DataType.MG1_TEXTURE:
             raise ValueError("Texture files must have MG1_TEXTURE data type.")
@@ -76,6 +88,11 @@ class Texture(Asset):
             layers_count += 1
 
         texture_bytes += (0).to_bytes(2)  # End of layer marker
+
+        if data_type == DataType.MG2_SECTION:
+            return Texture.from_stream(
+                BytesIO(texture_bytes), data_type=DataType.MG2_SECTION
+            )
 
         return Texture.from_stream(
             BytesIO(DataType.MG1_TEXTURE.to_bytes(2) + identifier + texture_bytes)

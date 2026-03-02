@@ -10,6 +10,17 @@ from mgtools.resource.asset import Asset
 class Palette(Asset):
     @property
     def raw_data(self) -> bytes:
+        if self.data_type == DataType.MG2_SECTION:
+            raw_bytes = b""
+
+            for block in self.__color_blocks:
+                block_data = b""
+                for r, g, b in block:
+                    block_data += struct.pack("BBBB", b, g, r, 0)
+                raw_bytes += len(block_data).to_bytes(4) + block_data
+
+            return raw_bytes
+
         raw_bytes = self.data_type.to_bytes(2)
 
         palette_data = b""
@@ -25,7 +36,7 @@ class Palette(Asset):
     def palette_bytes(self) -> bytes:
         palette = b""
 
-        for r, g, b in self.__colors:
+        for r, g, b in self.__colors[:256]:
             palette += bytes([r, g, b])
 
         return palette
@@ -33,6 +44,7 @@ class Palette(Asset):
     def __init__(self, data_type: DataType) -> None:
         super().__init__(data_type)
         self.__colors: list[tuple[int, int, int]] = []
+        self.__color_blocks: list[list[tuple[int, int, int]]] = []
 
     @staticmethod
     def from_stream(
@@ -42,8 +54,32 @@ class Palette(Asset):
         if data_type is None:
             data_type = DataType(int.from_bytes(reader.read(2)))
 
-        if data_type != DataType.MG1_SECTION:
-            raise ValueError("Palette files must have MG1_SECTION data type.")
+            if data_type != DataType.MG1_SECTION:
+                raise ValueError("Palette files must have MG1_SECTION data type.")
+
+        if data_type == DataType.MG2_SECTION:
+            f = Palette(data_type=data_type)
+
+            while True:
+                raw_size = reader.read(4)
+                if len(raw_size) < 4:
+                    break
+
+                block_size = int.from_bytes(raw_size)
+                if block_size == 0:
+                    break
+
+                block_data = reader.read(block_size)
+                block_colors: list[tuple[int, int, int]] = []
+
+                for i in range(0, len(block_data), 4):
+                    b, g, r, _ = struct.unpack("BBBB", block_data[i : i + 4])
+                    f.add_data(r=r, g=g, b=b)
+                    block_colors.append((r, g, b))
+
+                f.__color_blocks.append(block_colors)
+
+            return f
 
         data_length = int.from_bytes(reader.read(2))
 
@@ -65,12 +101,35 @@ class Palette(Asset):
 
         f = Palette(data_type=data_type or DataType.MG1_SECTION)
 
-        for color_elem in xmlroot.findall("Color"):
-            r = int(color_elem.get("r", "0"))
-            g = int(color_elem.get("g", "0"))
-            b = int(color_elem.get("b", "0"))
-
-            f.add_data(r=r, g=g, b=b)
+        if data_type == DataType.MG2_SECTION:
+            # MG2: read block structure from XML
+            block_elements = xmlroot.findall("Block")
+            if block_elements:
+                for block_elem in block_elements:
+                    block_colors: list[tuple[int, int, int]] = []
+                    for color_elem in block_elem.findall("Color"):
+                        r = int(color_elem.get("r", "0"))
+                        g = int(color_elem.get("g", "0"))
+                        b = int(color_elem.get("b", "0"))
+                        f.add_data(r=r, g=g, b=b)
+                        block_colors.append((r, g, b))
+                    f.__color_blocks.append(block_colors)
+            else:
+                # Fallback: flat color list, put all in one block
+                block_colors = []
+                for color_elem in xmlroot.findall("Color"):
+                    r = int(color_elem.get("r", "0"))
+                    g = int(color_elem.get("g", "0"))
+                    b = int(color_elem.get("b", "0"))
+                    f.add_data(r=r, g=g, b=b)
+                    block_colors.append((r, g, b))
+                f.__color_blocks.append(block_colors)
+        else:
+            for color_elem in xmlroot.findall("Color"):
+                r = int(color_elem.get("r", "0"))
+                g = int(color_elem.get("g", "0"))
+                b = int(color_elem.get("b", "0"))
+                f.add_data(r=r, g=g, b=b)
 
         return f
 
@@ -86,17 +145,37 @@ class Palette(Asset):
     def export(self, output_path: Path, **kwargs) -> None:
         root = ET.Element("Palette")
 
-        for i, (r, g, b) in enumerate(self.__colors):
-            ET.SubElement(
-                root,
-                "Color",
-                attrib={
-                    "index": str(i),
-                    "r": str(r),
-                    "g": str(g),
-                    "b": str(b),
-                },
-            )
+        if self.data_type == DataType.MG2_SECTION and self.__color_blocks:
+            # MG2: preserve block structure
+            global_index = 0
+            for block_idx, block in enumerate(self.__color_blocks):
+                block_elem = ET.SubElement(
+                    root, "Block", attrib={"index": str(block_idx)}
+                )
+                for r, g, b in block:
+                    ET.SubElement(
+                        block_elem,
+                        "Color",
+                        attrib={
+                            "index": str(global_index),
+                            "r": str(r),
+                            "g": str(g),
+                            "b": str(b),
+                        },
+                    )
+                    global_index += 1
+        else:
+            for i, (r, g, b) in enumerate(self.__colors):
+                ET.SubElement(
+                    root,
+                    "Color",
+                    attrib={
+                        "index": str(i),
+                        "r": str(r),
+                        "g": str(g),
+                        "b": str(b),
+                    },
+                )
 
         tree = ET.ElementTree(root)
         ET.indent(tree)

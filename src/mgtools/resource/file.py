@@ -88,18 +88,20 @@ class Resource:
         if self.__game == Game.MG1 and self.__header_bytes != b"\x00\x00":
             metadata["header_bytes"] = self.__header_bytes.hex()
 
-        # Save per-section identifiers for types that have them
+        # Save per-section identifiers for types that have them (MG1 only)
         section_identifiers: dict[str, str] = {}
-        file_type_map = self.__get_file_type_map()
 
-        for idx, section in enumerate(self.__sections):
-            file_type = file_type_map.get(idx, FileType.UNKNOWN)
-            if file_type in (FileType.FONT, FileType.TEXTURE):
-                # Identifier is bytes [2:4] of raw_data (after data_type)
-                raw = section.raw_data
-                identifier = raw[2:4]
-                if identifier != b"\x00\x00":
-                    section_identifiers[str(idx)] = identifier.hex()
+        if self.__game == Game.MG1:
+            file_type_map = self.__get_file_type_map()
+
+            for idx, section in enumerate(self.__sections):
+                file_type = file_type_map.get(idx, FileType.UNKNOWN)
+                if file_type in (FileType.FONT, FileType.TEXTURE):
+                    # Identifier is bytes [2:4] of raw_data (after data_type)
+                    raw = section.raw_data
+                    identifier = raw[2:4]
+                    if identifier != b"\x00\x00":
+                        section_identifiers[str(idx)] = identifier.hex()
 
         if section_identifiers:
             metadata["section_identifiers"] = section_identifiers
