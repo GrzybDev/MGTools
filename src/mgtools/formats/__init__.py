@@ -5,9 +5,12 @@ from typing import Annotated
 import typer
 
 from mgtools.formats.ctxr import export_ctxr, import_ctxr
+from mgtools.formats.gcx import compile_gcx, decompile_gcx
+from mgtools.formats.gcx.dictionary import load_dictionary
 from mgtools.formats.mgs_font import export_mgs_font, import_mgs_font
 
 ctxr = typer.Typer(help="Tools for working with ctxr textures")
+gcx = typer.Typer(help="Tools for working with GCX script files")
 mgs_font = typer.Typer(
     help="Tools for working with MGS font files (MGS_Font.raw, MGS_Font_nht.raw)"
 )
@@ -88,3 +91,38 @@ def mgs_font_import(
         output_file = input_dir.parent / f"{input_dir.name}.raw"
 
     import_mgs_font(input_dir, output_file)
+
+
+@gcx.command("decompile", help="Decompile GCX file(s) to GCL script.")
+def gcx_decompile(
+    input_file: Annotated[Path, typer.Argument(exists=True, readable=True)],
+    output_file: Annotated[
+        Path | None, typer.Argument(file_okay=True, writable=True)
+    ] = None,
+    dictionary: Annotated[
+        Path | None,
+        typer.Option(
+            "--dictionary",
+            "-d",
+            help="Path to strcode dictionary file for resolving command names.",
+        ),
+    ] = None,
+):
+    if output_file is None:
+        output_file = input_file.parent / input_file.with_suffix(".gcl")
+
+    dict_data = load_dictionary(dictionary) if dictionary else None
+    decompile_gcx(input_file, output_file, dictionary=dict_data)
+
+
+@gcx.command("compile", help="Compile GCL script back to GCX binary.")
+def gcx_compile(
+    input_file: Annotated[Path, typer.Argument(exists=True, readable=True)],
+    output_file: Annotated[
+        Path | None, typer.Argument(file_okay=True, writable=True)
+    ] = None,
+):
+    if output_file is None:
+        output_file = input_file.parent / input_file.with_suffix(".gcx")
+
+    compile_gcx(input_file, output_file)

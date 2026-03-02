@@ -10,6 +10,11 @@ app.add_typer(
 )
 app.add_typer(formats.ctxr, name="ctxr", help="Tools for working with ctxr textures")
 app.add_typer(
+    formats.gcx,
+    name="gcx",
+    help="Tools for working with GCX script files (Game Command Language)",
+)
+app.add_typer(
     formats.mgs_font,
     name="mgs-font",
     help="Tools for working with MGS font files (MGS_Font.raw, MGS_Font_nht.raw)",
