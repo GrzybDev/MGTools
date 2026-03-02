@@ -3,10 +3,10 @@ from io import BufferedReader, BytesIO
 from pathlib import Path
 
 from mgtools.enumerators.data_type import DataType
-from mgtools.file import File
+from mgtools.resource.asset import Asset
 
 
-class UnknownFile(File):
+class UnknownFile(Asset):
     @property
     def raw_data(self) -> bytes:
         if self.data_type == DataType.MG2_SECTION:
@@ -42,7 +42,7 @@ class UnknownFile(File):
     @staticmethod
     def from_stream(
         reader: BufferedReader | BytesIO, data_type: DataType | None = None
-    ) -> "UnknownFile":
+    ) -> Asset:
         if data_type is None:
             data_type = DataType(int.from_bytes(reader.read(2)))
 
@@ -90,7 +90,7 @@ class UnknownFile(File):
         return f
 
     @staticmethod
-    def from_file(file_path: Path, data_type: DataType | None = None) -> "UnknownFile":
+    def from_file(file_path: Path, data_type: DataType | None = None) -> Asset:
         if data_type is None:
             raise ValueError("Data type must be provided for UnknownFile.")
 

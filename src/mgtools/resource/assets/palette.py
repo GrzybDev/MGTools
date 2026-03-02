@@ -4,10 +4,10 @@ from io import BufferedReader, BytesIO
 from pathlib import Path
 
 from mgtools.enumerators.data_type import DataType
-from mgtools.file import File
+from mgtools.resource.asset import Asset
 
 
-class Palette(File):
+class Palette(Asset):
     @property
     def raw_data(self) -> bytes:
         raw_bytes = self.data_type.to_bytes(2)
@@ -38,7 +38,7 @@ class Palette(File):
     def from_stream(
         reader: BufferedReader | BytesIO,
         data_type: DataType | None = None,
-    ) -> "Palette":
+    ) -> Asset:
         if data_type is None:
             data_type = DataType(int.from_bytes(reader.read(2)))
 
@@ -60,7 +60,7 @@ class Palette(File):
         return f
 
     @staticmethod
-    def from_file(file_path: Path, data_type: DataType | None = None) -> "Palette":
+    def from_file(file_path: Path, data_type: DataType | None = None) -> Asset:
         xmlroot = ET.parse(file_path).getroot()
 
         f = Palette(data_type=data_type or DataType.MG1_SECTION)

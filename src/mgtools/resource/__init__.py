@@ -7,7 +7,7 @@ from mgtools.dataclasses.locale_format import LocaleFormat
 from mgtools.enumerators.game import Game
 from mgtools.mg1.constants import RESOURCE_SECTION_COUNT as MG1_SECTION_COUNT
 from mgtools.mg2.constants import RESOURCE_SECTION_COUNT as MG2_SECTION_COUNT
-from mgtools.resource_file import Resource
+from mgtools.resource.file import Resource
 
 app = typer.Typer(
     help="Tools for working with resource files (English.bin, English.raw etc.)"
@@ -15,10 +15,10 @@ app = typer.Typer(
 
 
 @app.command(
-    "export",
-    help="Export resources from specified resource file. (English.bin, English.raw etc.)",
+    "unpack",
+    help="Unpack resources from specified resource file. (English.bin, English.raw etc.)",
 )
-def resource_export(
+def resource_unpack(
     input_file: Annotated[
         Path, typer.Argument(exists=True, file_okay=True, readable=True)
     ],
@@ -43,7 +43,7 @@ def resource_export(
     resource.save_metadata(output_dir)
 
     for index in range(resource.section_count):
-        resource.export(
+        resource.unpack(
             output_dir,
             index,
             separate_chars=separate_chars,
@@ -51,8 +51,8 @@ def resource_export(
         )
 
 
-@app.command("generate", help="Generate new resource file from specified folder.")
-def resource_generate(
+@app.command("pack", help="Pack new resource file from specified folder.")
+def resource_pack(
     input_dir: Annotated[Path, typer.Argument(dir_okay=True, readable=True)],
     output_file: Annotated[
         Path | None, typer.Argument(file_okay=True, writable=True)

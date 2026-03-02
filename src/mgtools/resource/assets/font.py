@@ -9,7 +9,6 @@ from PIL import Image
 from mgtools.constants import EXPORT_FONT_ATLAS_EXTENSION, EXPORT_FONT_METADATA_FILENAME
 from mgtools.dataclasses.glyph import Glyph
 from mgtools.enumerators.data_type import DataType
-from mgtools.file import File
 from mgtools.mg1.constants import (
     FONT_EXPORT_ATLAS_HEIGHT,
     FONT_EXPORT_ATLAS_WIDTH,
@@ -18,10 +17,11 @@ from mgtools.mg1.constants import (
     FONT_MINIMUM_PAGE_SIZE,
     FONT_START_CHAR,
 )
-from mgtools.mgscii import get_mgscii_char
+from mgtools.resource.asset import Asset
+from mgtools.utilities.mgscii import get_mgscii_char
 
 
-class Font(File):
+class Font(Asset):
     @property
     def raw_data(self) -> bytes:
         page_bytes = b""
@@ -50,7 +50,7 @@ class Font(File):
             )
 
         return (
-            self.data_type.value.to_bytes(2)
+            self.data_type.to_bytes(2)
             + b"\0\0"  # Identifier placeholder
             + page_bytes
         )
@@ -63,7 +63,7 @@ class Font(File):
     def from_stream(
         reader: BufferedReader | BytesIO,
         data_type: DataType | None = None,
-    ) -> "Font":
+    ) -> Asset:
         if data_type is None:
             data_type = DataType(int.from_bytes(reader.read(2)))
 
@@ -82,7 +82,23 @@ class Font(File):
         return f
 
     @staticmethod
-    def from_file(file_path: Path, data_type: DataType | None = None) -> File:
+    def __encode_glyph(
+        width: int,
+        bitmap_bytes: bytes,
+        glyphs_data: bytearray,
+        bitmap_data: bytearray,
+    ) -> None:
+        """Append one glyph's header + bitmap to the accumulators."""
+        glyphs_data.extend(len(bitmap_data).to_bytes(2, "little"))
+        glyphs_data.extend(
+            (0).to_bytes(2) if width == 1 else ((width - 1) << 4).to_bytes(2, "little")
+        )
+
+        if width != 1 and width != 4096:
+            bitmap_data.extend(bitmap_bytes)
+
+    @staticmethod
+    def from_file(file_path: Path, data_type: DataType | None = None) -> Asset:
         xmlroot = ET.parse(file_path / EXPORT_FONT_METADATA_FILENAME).getroot()
         page_elements = xmlroot.findall("Page")
         page_bytes = b""
@@ -107,29 +123,19 @@ class Font(File):
                         glyph_bitmap_data = b""
                     else:
                         glyph_image = Image.open(glyph_image_path).convert("L")
-                        pixel_data = glyph_image.tobytes()
-
-                        glyph_bitmap_data = Font.__pack_bitmap_data(pixel_data)
-
+                        glyph_bitmap_data = Font.__pack_bitmap_data(
+                            glyph_image.tobytes()
+                        )
                         width = glyph_image.width
 
-                    glyphs_data.extend(len(bitmap_data).to_bytes(2, "little"))
-
-                    if width == 1:
-                        glyphs_data.extend((0).to_bytes(2))
-                    else:
-                        glyphs_data.extend(((width - 1) << 4).to_bytes(2, "little"))
-
-                    if width != 1 and width != 4096:
-                        bitmap_data.extend(glyph_bitmap_data)
+                    Font.__encode_glyph(
+                        width, glyph_bitmap_data, glyphs_data, bitmap_data
+                    )
             else:
-                atlas_image = Image.open(
-                    file_path / f"{page_idx}.{EXPORT_FONT_ATLAS_EXTENSION}"
-                ).convert("L")
+                atlas_image = Image.open(atlas_path).convert("L")
 
                 for glyph_element in page.findall("Glyph"):
                     width = int(glyph_element.get("width", "0"))
-
                     x_offset = int(glyph_element.get("x_offset", "0"))
                     y_offset = int(glyph_element.get("y_offset", "0"))
 
@@ -142,25 +148,18 @@ class Font(File):
                         )
                     )
 
-                    pixel_data = glyph_image.tobytes()
-                    glyph_bitmap_data = Font.__pack_bitmap_data(pixel_data)
+                    glyph_bitmap_data = Font.__pack_bitmap_data(glyph_image.tobytes())
 
-                    glyphs_data.extend(len(bitmap_data).to_bytes(2, "little"))
-
-                    if width == 1:
-                        glyphs_data.extend((0).to_bytes(2))
-                    else:
-                        glyphs_data.extend(((width - 1) << 4).to_bytes(2, "little"))
-
-                    if width != 1 and width != 4096:
-                        bitmap_data.extend(glyph_bitmap_data)
+                    Font.__encode_glyph(
+                        width, glyph_bitmap_data, glyphs_data, bitmap_data
+                    )
 
             page_bytes += (
                 len(glyphs_data + bitmap_data).to_bytes(4) + glyphs_data + bitmap_data
             )
 
         return Font.from_stream(
-            BytesIO(DataType.MG1_FONT.value.to_bytes(2) + b"\0\0" + page_bytes)
+            BytesIO(DataType.MG1_FONT.to_bytes(2) + b"\0\0" + page_bytes)
         )
 
     def add_data(self, **kwargs) -> None:

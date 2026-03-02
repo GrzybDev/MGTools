@@ -4,10 +4,10 @@ from pathlib import Path
 from PIL import Image
 
 from mgtools.enumerators.data_type import DataType
-from mgtools.file import File
+from mgtools.resource.asset import Asset
 
 
-class Texture(File):
+class Texture(Asset):
     @property
     def raw_data(self) -> bytes:
         raw_bytes = self.data_type.to_bytes(2)
@@ -25,7 +25,7 @@ class Texture(File):
     @staticmethod
     def from_stream(
         reader: BufferedReader | BytesIO, data_type: DataType | None = None
-    ) -> "Texture":
+    ) -> Asset:
         if data_type is None:
             data_type = DataType(int.from_bytes(reader.read(2)))
 
@@ -56,7 +56,7 @@ class Texture(File):
         return Texture.__get_texture_bytes(image)
 
     @staticmethod
-    def from_file(file_path: Path, data_type: DataType | None = None) -> "Texture":
+    def from_file(file_path: Path, data_type: DataType | None = None) -> Asset:
         texture_bytes = b""
 
         layers_count = 0

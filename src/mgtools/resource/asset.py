@@ -5,15 +5,14 @@ from pathlib import Path
 from mgtools.enumerators.data_type import DataType
 
 
-class File(ABC):
+class Asset(ABC):
     @property
     def data_type(self) -> DataType:
         return self.__data_type
 
     @property
     @abstractmethod
-    def raw_data(self) -> bytes:
-        raise NotImplementedError()
+    def raw_data(self) -> bytes: ...
 
     def __init__(self, data_type: DataType) -> None:
         self.__data_type: DataType = data_type
@@ -23,21 +22,17 @@ class File(ABC):
     def from_stream(
         reader: BufferedReader | BytesIO,
         data_type: DataType | None = None,
-    ) -> "File":
-        raise NotImplementedError()
+    ) -> "Asset": ...
 
     @staticmethod
     @abstractmethod
     def from_file(
         file_path: Path,
         data_type: DataType | None = None,
-    ) -> "File":
-        raise NotImplementedError()
+    ) -> "Asset": ...
 
     @abstractmethod
-    def add_data(self, **kwargs) -> None:
-        raise NotImplementedError()
+    def add_data(self, **kwargs) -> None: ...
 
     @abstractmethod
-    def export(self, output_path: Path, **kwargs) -> None:
-        raise NotImplementedError()
+    def export(self, output_path: Path, **kwargs) -> None: ...
