@@ -47,7 +47,7 @@ class Locale(Asset):
 
     def __init__(self, data_type: DataType) -> None:
         super().__init__(data_type)
-        self.__blocks: dict[int, bytes | list[str]] = {}
+        self.__blocks: dict[int, bytes | list[tuple[int, str]]] = {}
 
     @staticmethod
     def from_stream(
@@ -190,11 +190,30 @@ class Locale(Asset):
         stream = BytesIO()
 
         for unit in units:
+            prefix = Locale.__extract_prefix(unit)
             Locale.__write_string_entry(
-                stream, str(unit.target or unit.source), mg2, char_map
+                stream,
+                str(unit.target or unit.source),
+                mg2,
+                char_map,
+                prefix=prefix,
             )
 
         return stream.getvalue()
+
+    @staticmethod
+    def __extract_prefix(unit: TranslationUnit) -> int:
+        """Read the MG1 entry prefix byte stored in a developer note."""
+        notes = unit.getnotes(origin="developer")
+        if notes:
+            for line in notes.split("\n"):
+                line = line.strip()
+                if line.startswith("mg1_prefix:"):
+                    try:
+                        return int(line.split(":", 1)[1])
+                    except (ValueError, IndexError):
+                        pass
+        return 0
 
     @staticmethod
     def __write_string_entry(
@@ -202,9 +221,10 @@ class Locale(Asset):
         text: str,
         mg2: bool,
         char_map: dict[str, int] | None = None,
+        prefix: int = 0,
     ) -> None:
         if not mg2:
-            stream.write((0).to_bytes(1))
+            stream.write(prefix.to_bytes(1))
 
         string_data = write_mgscii_string(text, char_map or {})
         stream.write(len(string_data).to_bytes(2))
@@ -213,19 +233,22 @@ class Locale(Asset):
     @staticmethod
     def __try_parse_text_block(
         block_data: bytes, mg2: bool = False
-    ) -> list[str] | None:
+    ) -> list[tuple[int, str]] | None:
         """Parse block_data as a text block.
 
-        Returns list of decoded strings on success, None if the data
-        does not look like a valid text block.
+        Returns list of (prefix, decoded_string) tuples on success,
+        None if the data does not look like a valid text block.
         """
         stream = BytesIO(block_data)
-        result: list[str] = []
+        result: list[tuple[int, str]] = []
 
         while stream.tell() < len(block_data):
+            prefix = 0
             if not mg2:
-                if len(stream.read(1)) < 1:
+                raw_prefix = stream.read(1)
+                if len(raw_prefix) < 1:
                     return None
+                prefix = raw_prefix[0]
 
             raw_len = stream.read(2)
             if len(raw_len) < 2:
@@ -239,18 +262,20 @@ class Locale(Asset):
             if stream.tell() + string_length > len(block_data):
                 return None
 
-            result.append(read_mgscii_string(stream.read(string_length)))
+            result.append((prefix, read_mgscii_string(stream.read(string_length))))
 
         if stream.tell() != len(block_data):
             return None
 
         return result
 
-    def __build_text_block(self, data: list[str], mg2: bool = False) -> bytes:
+    def __build_text_block(
+        self, data: list[tuple[int, str]], mg2: bool = False
+    ) -> bytes:
         stream = BytesIO()
 
-        for entry in data:
-            self.__write_string_entry(stream, entry, mg2)
+        for prefix, text in data:
+            self.__write_string_entry(stream, text, mg2, prefix=prefix)
 
         return stream.getvalue()
 
@@ -319,7 +344,7 @@ class Locale(Asset):
     def __export_text_block(
         output_path: Path,
         block_idx: int,
-        block_data: list[str],
+        block_data: list[tuple[int, str]],
         locale_format: LocaleFormat,
         storage: TranslationStore,
     ) -> None:
@@ -330,23 +355,31 @@ class Locale(Asset):
                 assert isinstance(storage, xliff.Xliff1File)
                 storage.switchfile(block_name, createifmissing=True)
 
-                for source_text in block_data:
-                    storage.addunit(xliff.Xliff1Unit(source=source_text))
+                for prefix, source_text in block_data:
+                    unit = xliff.Xliff1Unit(source=source_text)
+                    if prefix != 0:
+                        unit.addnote(f"mg1_prefix:{prefix}", origin="developer")
+                    storage.addunit(unit)
 
             case LocaleFormat.XLF:
                 assert isinstance(storage, xliff2.Xliff2File)
                 file_node = storage.createfilenode(block_name)
                 storage.document.getroot().append(file_node)
 
-                for source_text in block_data:
+                for prefix, source_text in block_data:
                     unit = xliff2.Xliff2Unit(source=source_text)
+                    if prefix != 0:
+                        unit.addnote(f"mg1_prefix:{prefix}", origin="developer")
                     file_node.append(unit.xmlelement)
 
             case _:
                 po_storage = po.pofile()
 
-                for source_text in block_data:
-                    po_storage.addunit(po.pounit(source=source_text))
+                for prefix, source_text in block_data:
+                    unit = po.pounit(source=source_text)
+                    if prefix != 0:
+                        unit.addnote(f"mg1_prefix:{prefix}", origin="developer")
+                    po_storage.addunit(unit)
 
                 po_storage.savefile(
                     str(output_path / f"{block_idx:02d}.{locale_format.name.lower()}")
