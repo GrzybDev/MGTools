@@ -83,7 +83,26 @@ class Resource:
         output_dir.mkdir(parents=True, exist_ok=True)
         metadata_path = output_dir / RESOURCE_METADATA_FILENAME
 
-        metadata = {"game": self.__game.value}
+        metadata: dict = {"game": self.__game.value}
+
+        if self.__game == Game.MG1 and self.__header_bytes != b"\x00\x00":
+            metadata["header_bytes"] = self.__header_bytes.hex()
+
+        # Save per-section identifiers for types that have them
+        section_identifiers: dict[str, str] = {}
+        file_type_map = self.__get_file_type_map()
+
+        for idx, section in enumerate(self.__sections):
+            file_type = file_type_map.get(idx, FileType.UNKNOWN)
+            if file_type in (FileType.FONT, FileType.TEXTURE):
+                # Identifier is bytes [2:4] of raw_data (after data_type)
+                raw = section.raw_data
+                identifier = raw[2:4]
+                if identifier != b"\x00\x00":
+                    section_identifiers[str(idx)] = identifier.hex()
+
+        if section_identifiers:
+            metadata["section_identifiers"] = section_identifiers
 
         with open(metadata_path, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2)
@@ -108,6 +127,21 @@ class Resource:
             return Game(game_value)
         except ValueError:
             raise ValueError(f"Unknown game '{game_value}' in {metadata_path}")
+
+    @staticmethod
+    def load_metadata(input_dir: Path) -> dict:
+        """Load resource metadata including game and optional header_bytes."""
+        metadata_path = input_dir / RESOURCE_METADATA_FILENAME
+
+        if not metadata_path.is_file():
+            raise FileNotFoundError(
+                f"Metadata file not found: {metadata_path}\n"
+                "This folder was not created by 'mgtools export' or the "
+                f"'{RESOURCE_METADATA_FILENAME}' file was deleted."
+            )
+
+        with open(metadata_path, "r", encoding="utf-8") as f:
+            return json.load(f)
 
     @staticmethod
     def from_file(file_path: Path) -> "Resource":
@@ -207,7 +241,7 @@ class Resource:
             return MG2_FILE_TYPE_MAP
         raise ValueError(f"Unsupported game: {self.__game}")
 
-    def add_from_folder(self, input_dir: Path, section_index: int) -> None:
+    def add_from_folder(self, input_dir: Path, section_index: int, **kwargs) -> None:
         if self.__game == Game.MG1:
             default_data_type = DataType.MG1_SECTION
             data_type_map = MG1_DATA_TYPE_MAP
@@ -221,6 +255,11 @@ class Resource:
         file_type = file_type_map.get(section_index, FileType.UNKNOWN)
         section_name = f"{section_index:02d}"
 
+        # Look up per-section identifier from metadata
+        section_identifiers = kwargs.get("section_identifiers", {})
+        identifier_hex = section_identifiers.get(str(section_index))
+        identifier = bytes.fromhex(identifier_hex) if identifier_hex else b"\0\0"
+
         if file_type in _EXPORT_LAYOUT:
             ext, folder = _EXPORT_LAYOUT[file_type]
             source_dir = input_dir / folder if folder else input_dir
@@ -229,7 +268,12 @@ class Resource:
             data_type = DataType.MG2_SECTION if self.__game == Game.MG2 else None
 
             cls = _FILE_CLASSES[file_type]
-            self.__sections.append(cls.from_file(source_path, data_type=data_type))
+            extra_kwargs: dict = {}
+            if file_type in (FileType.FONT, FileType.TEXTURE):
+                extra_kwargs["identifier"] = identifier
+            self.__sections.append(
+                cls.from_file(source_path, data_type=data_type, **extra_kwargs)
+            )
         else:
             source_name = f"{section_name}.{EXPORT_UNKNOWN_EXTENSION}"
             source_dir = input_dir / EXPORT_UNKNOWN_FOLDER

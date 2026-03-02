@@ -11,7 +11,7 @@ class Texture(Asset):
     @property
     def raw_data(self) -> bytes:
         raw_bytes = self.data_type.to_bytes(2)
-        raw_bytes += (0).to_bytes(2)  # Unknown bytes
+        raw_bytes += self.__identifier
 
         for layer in self.__layers:
             raw_bytes += self.__get_texture_bytes(layer)
@@ -21,6 +21,7 @@ class Texture(Asset):
     def __init__(self, data_type: DataType) -> None:
         super().__init__(data_type)
         self.__layers: list[Image.Image] = []
+        self.__identifier = b"\0\0"
 
     @staticmethod
     def from_stream(
@@ -32,9 +33,8 @@ class Texture(Asset):
         if data_type != DataType.MG1_TEXTURE:
             raise ValueError("Texture files must have MG1_TEXTURE data type.")
 
-        reader.seek(2, 1)  # Skip unknown bytes
-
         f = Texture(data_type=data_type)
+        f.__identifier = reader.read(2)
         f.add_data(reader=reader)
         f.add_data(reader=reader)
 
@@ -56,7 +56,10 @@ class Texture(Asset):
         return Texture.__get_texture_bytes(image)
 
     @staticmethod
-    def from_file(file_path: Path, data_type: DataType | None = None) -> Asset:
+    def from_file(
+        file_path: Path, data_type: DataType | None = None, **kwargs
+    ) -> Asset:
+        identifier = kwargs.get("identifier", b"\0\0")
         texture_bytes = b""
 
         layers_count = 0
@@ -75,7 +78,7 @@ class Texture(Asset):
         texture_bytes += (0).to_bytes(2)  # End of layer marker
 
         return Texture.from_stream(
-            BytesIO(DataType.MG1_TEXTURE.to_bytes(2) + (0).to_bytes(2) + texture_bytes)
+            BytesIO(DataType.MG1_TEXTURE.to_bytes(2) + identifier + texture_bytes)
         )
 
     def add_data(self, **kwargs) -> None:

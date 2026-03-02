@@ -6,7 +6,10 @@ from pathlib import Path
 
 from PIL import Image
 
-from mgtools.constants import EXPORT_FONT_ATLAS_EXTENSION, EXPORT_FONT_METADATA_FILENAME
+from mgtools.constants import (
+    EXPORT_FONT_ATLAS_EXTENSION,
+    EXPORT_FONT_METADATA_FILENAME,
+)
 from mgtools.dataclasses.glyph import Glyph
 from mgtools.enumerators.data_type import DataType
 from mgtools.mg1.constants import (
@@ -26,7 +29,7 @@ class Font(Asset):
     def raw_data(self) -> bytes:
         page_bytes = b""
 
-        for page in self.__pages:
+        for page_idx, page in enumerate(self.__pages):
             glyphs_data = bytearray()
             bitmap_data = bytearray()
 
@@ -49,15 +52,12 @@ class Font(Asset):
                 len(glyphs_data + bitmap_data).to_bytes(4) + glyphs_data + bitmap_data
             )
 
-        return (
-            self.data_type.to_bytes(2)
-            + b"\0\0"  # Identifier placeholder
-            + page_bytes
-        )
+        return self.data_type.to_bytes(2) + self.__identifier + page_bytes
 
     def __init__(self, data_type: DataType) -> None:
         super().__init__(data_type)
         self.__pages = []
+        self.__identifier = b"\0\0"
 
     @staticmethod
     def from_stream(
@@ -70,9 +70,8 @@ class Font(Asset):
         if data_type != DataType.MG1_FONT:
             raise ValueError("Font files must have MG1_FONT data type.")
 
-        reader.seek(2, os.SEEK_CUR)  # Skip identifier
-
         f = Font(data_type=data_type)
+        f.__identifier = reader.read(2)
 
         for idx in range(5):
             page_size = int.from_bytes(reader.read(4))
@@ -98,7 +97,10 @@ class Font(Asset):
             bitmap_data.extend(bitmap_bytes)
 
     @staticmethod
-    def from_file(file_path: Path, data_type: DataType | None = None) -> Asset:
+    def from_file(
+        file_path: Path, data_type: DataType | None = None, **kwargs
+    ) -> Asset:
+        identifier = kwargs.get("identifier", b"\0\0")
         xmlroot = ET.parse(file_path / EXPORT_FONT_METADATA_FILENAME).getroot()
         page_elements = xmlroot.findall("Page")
         page_bytes = b""
@@ -159,7 +161,7 @@ class Font(Asset):
             )
 
         return Font.from_stream(
-            BytesIO(DataType.MG1_FONT.to_bytes(2) + b"\0\0" + page_bytes)
+            BytesIO(DataType.MG1_FONT.to_bytes(2) + identifier + page_bytes)
         )
 
     def add_data(self, **kwargs) -> None:

@@ -59,6 +59,7 @@ def resource_pack(
     ] = None,
 ):
     game = Resource.detect_game(input_dir)
+    metadata = Resource.load_metadata(input_dir)
 
     if game == Game.MG1:
         section_count = MG1_SECTION_COUNT
@@ -68,9 +69,17 @@ def resource_pack(
     if output_file is None:
         output_file = input_dir / f"{input_dir.name}.bin"
 
-    resource = Resource(game=game)
+    header_bytes = (
+        bytes.fromhex(metadata["header_bytes"])
+        if "header_bytes" in metadata
+        else b"\x00\x00"
+    )
+    section_identifiers = metadata.get("section_identifiers", {})
+    resource = Resource(game=game, header_bytes=header_bytes)
 
     for index in range(section_count):
-        resource.add_from_folder(input_dir, index)
+        resource.add_from_folder(
+            input_dir, index, section_identifiers=section_identifiers
+        )
 
     resource.save(output_file)
