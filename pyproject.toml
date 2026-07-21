@@ -12,7 +12,7 @@ license-files = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "pillow>=12.2.0",
+    "pillow>=12.3.0",
     "translate-toolkit>=3.17.5",
     "typer>=0.24.0",
 ]
