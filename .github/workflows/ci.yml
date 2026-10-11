@@ -1,0 +1,15 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: GrzybDev/actions/.github/workflows/python-app.yml@v1
+    with:
+      include-package: rich._unicode_data
