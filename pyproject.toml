@@ -13,12 +13,11 @@ license-files = [
 requires-python = ">=3.14"
 dependencies = [
     "pillow>=13.0.0",
-    "polib (>=1.2.0,<2.0.0)",
     "typer>=0.27.3",
 ]
 
 [project.scripts]
-mgtools = "mgtools:app"
+mgtools = "mgtools.cli:app"
 
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14"]
