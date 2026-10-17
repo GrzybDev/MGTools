@@ -13,6 +13,7 @@ license-files = [
 requires-python = ">=3.14"
 dependencies = [
     "pillow>=13.0.0",
+    "rich>=15.0.0",
     "typer>=0.27.3",
 ]
 
@@ -22,3 +23,12 @@ mgtools = "mgtools.cli:app"
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers"]
