@@ -26,9 +26,40 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "mypy>=2.4.0",
     "pytest>=9.1.1",
+    "ruff>=0.17.1",
 ]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "PTH", "RUF", "TID251", "D"]
+# Types carry a summary only where their name needs one; magic methods inherit the protocol's docs.
+ignore = ["D101", "D105", "D106"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"typer".msg = "Only mgtools.cli is a command line; the formats stay usable without it."
+"rich".msg = "Only mgtools.cli is a command line; the formats stay usable without it."
+"mgtools.cli".msg = "Only mgtools.cli is a command line; the formats stay usable without it."
+
+[tool.ruff.lint.per-file-ignores]
+"src/mgtools/cli/**" = ["TID251"]
+"src/mgtools/__main__.py" = ["TID251"]
+"tests/cli/**" = ["TID251"]
+# Test modules and tests are named after what they prove.
+"tests/**/test_*.py" = ["D100", "D103"]
+"tests/**/__init__.py" = ["D104"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["-ra", "--strict-markers"]
+
+[tool.mypy]
+files = ["src", "tests"]
+strict = true
