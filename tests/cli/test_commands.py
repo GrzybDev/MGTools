@@ -8,6 +8,7 @@ from mgtools.mc.cfon import ConsoleFont, encode_font
 from mgtools.mc.ctxr import Texture, encode_texture
 from mgtools.mc.gcx.nodes import Block, Call
 from mgtools.mc.gcx.script import Proc, Script, encode_script
+from mgtools.mc.keepfont import Keepfont, LatinGlyph, encode_keepfont
 from mgtools.mc.la2.codec import encode_layout
 from mgtools.mc.la2.model import Layout, Node
 from mgtools.mc.tnof import Glyph, TnofFont, encode_tnof
@@ -33,6 +34,11 @@ FILES = {
         "MGS_Font.raw",
         encode_tnof(TnofFont((1, 2, 3), (Glyph(0x41, 1, 1, 0, 0, 2, b"\xff"),))),
         "MGS_Font",
+    ),
+    "keepfont": (
+        "keepfont.raw",
+        encode_keepfont(Keepfont(0, (LatinGlyph(1, 0, bytes(24)),), (bytes(576),))),
+        "keepfont",
     ),
 }
 

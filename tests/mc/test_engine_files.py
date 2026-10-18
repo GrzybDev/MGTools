@@ -5,6 +5,12 @@ from pathlib import Path
 
 import pytest
 
+from mgtools.mc.keepfont import (
+    decode_keepfont,
+    encode_keepfont,
+    export_keepfont,
+    import_keepfont,
+)
 from mgtools.mc.tnof import decode_tnof, encode_tnof, export_tnof, import_tnof
 
 
@@ -35,3 +41,15 @@ def test_every_tnof_font_rebuilds_and_imports_back(
             assert encode_tnof(font) == data
             export_tnof(font, tmp_path / str(index))
             assert encode_tnof(import_tnof(tmp_path / str(index))) == data
+
+
+def test_every_keepfont_rebuilds_and_imports_back(
+    steam_dir: Path, tmp_path: Path, subtests: pytest.Subtests
+) -> None:
+    for path in _files(steam_dir, "assets/raw/*/keepfont*.raw"):
+        with subtests.test(path.name):
+            data = path.read_bytes()
+            font = decode_keepfont(data)
+            assert encode_keepfont(font) == data
+            export_keepfont(font, tmp_path / path.stem)
+            assert encode_keepfont(import_keepfont(tmp_path / path.stem)) == data
