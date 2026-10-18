@@ -4,7 +4,7 @@ import struct
 from collections.abc import Buffer, Iterator
 from enum import StrEnum
 from functools import cache
-from typing import Any
+from typing import Any, Literal
 
 from mgtools.errors import FormatError
 
@@ -14,6 +14,11 @@ class ByteOrder(StrEnum):
 
     LITTLE = "<"
     BIG = ">"
+
+    @property
+    def endianness(self) -> Literal["little", "big"]:
+        """The byte order as int.from_bytes and int.to_bytes name it."""
+        return "little" if self is ByteOrder.LITTLE else "big"
 
 
 @cache
@@ -85,6 +90,10 @@ class BinaryReader:
     def u16(self) -> int:
         """Read an unsigned 16-bit integer."""
         return int(self.unpack("H")[0])
+
+    def u24(self) -> int:
+        """Read an unsigned 24-bit integer."""
+        return int.from_bytes(self._take(3), self.byte_order.endianness)
 
     def u32(self) -> int:
         """Read an unsigned 32-bit integer."""

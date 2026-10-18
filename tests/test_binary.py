@@ -9,8 +9,8 @@ from mgtools.errors import FormatError
 @pytest.mark.parametrize(
     ("byte_order", "data"),
     [
-        (ByteOrder.LITTLE, b"\x01\x02\x00\x03\x00\x00\x00"),
-        (ByteOrder.BIG, b"\x01\x00\x02\x00\x00\x00\x03"),
+        (ByteOrder.LITTLE, b"\x01\x02\x00\x03\x00\x00\x00\x04\x00\x00"),
+        (ByteOrder.BIG, b"\x01\x00\x02\x00\x00\x00\x03\x00\x00\x04"),
     ],
 )
 def test_values_are_written_and_read_in_the_byte_order_of_the_instance(
@@ -22,8 +22,9 @@ def test_values_are_written_and_read_in_the_byte_order_of_the_instance(
     writer.u32(3)
     reader = BinaryReader(data, byte_order)
 
-    assert writer.getvalue() == data
-    assert [reader.u8(), reader.u16(), reader.u32()] == [1, 2, 3]
+    # Only the reader has 24-bit values.
+    assert writer.getvalue() == data[:7]
+    assert [reader.u8(), reader.u16(), reader.u32(), reader.u24()] == [1, 2, 3, 4]
     assert reader.remaining == 0
 
 
