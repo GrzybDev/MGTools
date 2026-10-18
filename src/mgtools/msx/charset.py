@@ -36,6 +36,22 @@ JP_CHARMAP: Charmap = {
 }  # fmt: skip
 """The characters the Japanese font draws, for the lines Marv speaks in Czech."""
 
+PLACEHOLDERS = {
+    "wait": "{wait} waits for a button, then clears the window",
+    "autowait": "{autowait} waits about half a second, then clears the window",
+    "r": "{r} marks the partner as the speaker",
+    "s": "{s} marks Snake as the speaker",
+    "e": "{e} sets an engine flag",
+    "f": "{f} draws a picture",
+    "speed": "{speed:N} sets the typing speed: 1, 4, 7 fast, 2, 5, 8 normal, 3, 6, 9 slow",
+    "bgm": "{bgm:NN} changes the music to track NN",
+    "se": "{se:NN} plays the sound effect NN",
+    "btn": "{btn:N} draws the icon of controller button N",
+    "x": "{x:HH} is a byte that stands for no character",
+    "sjis": "{sjis:HHHH} is a double-byte character given by its Shift-JIS code",
+}
+"""What each placeholder does, by its name."""
+
 _MG2_ESCAPES = {
     b"w": "{wait}",
     b"W": "{autowait}",

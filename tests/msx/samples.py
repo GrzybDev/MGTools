@@ -1,6 +1,10 @@
-"""Small invented fonts of the MSX games."""
+"""Small invented fonts and text sections of the MSX games."""
+
+import struct
+from collections.abc import Iterable, Sequence
 
 from mgtools.bitmap import pack_2bpp
+from mgtools.msx.charset import EU_CHARMAP, JP_CHARMAP
 from mgtools.msx.font import DoubleByteGlyph, Font, Glyph, Page
 
 
@@ -68,3 +72,86 @@ PADDED_FONT = Font(
     double_byte=(),
 )
 """A font whose ceiling-packed page 2 keeps bits after a glyph's last pixel."""
+
+
+def text_font(*, japanese: bool = False, double_bytes: Sequence[int] = (0x819A,)) -> Font:
+    """Return a font with glyphs for ASCII and the charmap but Ï, Japanese if asked.
+
+    Args:
+        japanese: Whether to take the Japanese charmap and make pages 1 to 3 sized.
+        double_bytes: The double-byte codes mapped to the glyphs after glyph 0.
+    """
+    charmap = JP_CHARMAP if japanese else EU_CHARMAP
+    codes = [*range(0x20, 0x7F), *(code for code in charmap if code != 0xC7)]
+    empty = Page({}, v=12 if japanese else None)
+    return Font(
+        pages=(Page({code: glyph(2, 24, code) for code in codes}), empty, empty, empty),
+        double_byte=(double_byte(None), *map(double_byte, double_bytes)),
+    )
+
+
+def strings(entries: Iterable[bytes | tuple[int, bytes]]) -> bytes:
+    """Return a block of strings, each with a style byte in MG1.
+
+    Args:
+        entries: The data of each string, paired with its style byte for MG1.
+    """
+    block = b""
+    for entry in entries:
+        style, data = entry if isinstance(entry, tuple) else (None, entry)
+        block += b"" if style is None else bytes((style,))
+        block += struct.pack(">H", len(data)) + data
+    return block
+
+
+MG1_WARPS = [
+    (b"\x01\x00\x02\x00", b"Dock", 640, 480, 3),
+    (b"\x00\x00\x00\x07", "倉庫の入口".encode("cp932"), 2048, 96, 0),
+]
+MG1_BLOCKS = [
+    bytes(range(6)),
+    bytes(range(8)),
+    bytes(range(12)),
+    strings([(0, b"Hello, Snake!"), (1, b"Phew, safe!")]),
+    strings([(2, b"Took the\nspare key."), (26, b"The crates were stacked")]),
+    strings([(4, b"Big Boss calling.\n\nKeep low.")]),
+    strings([(4, b"Schneider here.")]),
+    strings([]),
+    strings([(4, b"Diane.")]),
+    strings([(4, b"Jennifer.")]),
+    bytes(range(5, 0, -1)),
+    bytes(3),
+    b"".join(
+        params + struct.pack(">H", len(name)) + name + struct.pack(">HHB", x, y, flag)
+        for params, name, x, y, flag in MG1_WARPS
+    ),
+    strings([(4, b"Snake, do you read me?")]),
+    strings([(4, b"\x81\x63 Mission complete \x81\x9a")]),
+    strings(
+        [
+            (0, b"GADGETS"),
+            (0, b"TUNE"),
+            (0, b"Mine\n" + b"It explodes. " * 20),
+            (0, b"FUEL"),
+            (0, b"CAF\xbd"),
+        ]
+    ),
+    bytes(range(9)),
+]
+"""An MG1 text section: tables, strings with styles and the warp list."""
+
+MG2_BLOCKS = [
+    strings([b"Cigarettes\nMay harm your health."]),
+    strings([b"Handgun"]),
+    strings([b"\\sSnake\\r: \nSnake checking in.\\w"]),
+    strings([b"Campbell\\r: \n\\2Snake!\\B14\\w", b"Campbell\\r: \nOver.\\W"]),
+    *(strings([b"-"]) for _ in range(13)),
+    strings([b"\n".join(b"Line %d" % n for n in range(12))]),
+    strings([b"STAFF"]),
+    strings([b"Push the |4 button."]),
+    strings([]),
+    strings([b"Warp 1"]),
+    strings([b"Campbell", b"\x81\x9a" * 3]),
+    strings([b"Results"]),
+]
+"""An MG2 text section: one list of strings for each of its 24 blocks."""
