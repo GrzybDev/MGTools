@@ -11,6 +11,7 @@ from mgtools.mc.gcx.script import Proc, Script, encode_script
 from mgtools.mc.keepfont import Keepfont, LatinGlyph, encode_keepfont
 from mgtools.mc.la2.codec import encode_layout
 from mgtools.mc.la2.model import Layout, Node
+from mgtools.mc.stov import StovString, encode_stov
 from mgtools.mc.tnof import Glyph, TnofFont, encode_tnof
 from mgtools.mc.tri import Atlas, encode_atlas
 from tests.msx.samples import mg1_file
@@ -39,6 +40,11 @@ FILES = {
         "keepfont.raw",
         encode_keepfont(Keepfont(0, (LatinGlyph(1, 0, bytes(24)),), (bytes(576),))),
         "keepfont",
+    ),
+    "stov": (
+        "stovc.bin",
+        encode_stov([StovString(1, "en", "Hi")], "stovc"),
+        "stovc.xlf",
     ),
 }
 

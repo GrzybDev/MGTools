@@ -2,7 +2,7 @@
 
 import typer
 
-from mgtools.cli import cfon, ctxr, gcx, keepfont, la2, resource, tnof, tri
+from mgtools.cli import cfon, ctxr, gcx, keepfont, la2, resource, stov, tnof, tri
 
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(resource.app, name="resource")
@@ -13,6 +13,7 @@ app.add_typer(la2.app, name="la2")
 app.add_typer(cfon.app, name="cfon")
 app.add_typer(tnof.app, name="tnof")
 app.add_typer(keepfont.app, name="keepfont")
+app.add_typer(stov.app, name="stov")
 
 
 @app.callback()

@@ -11,7 +11,9 @@ from mgtools.mc.keepfont import (
     export_keepfont,
     import_keepfont,
 )
+from mgtools.mc.stov import decode_stov, encode_stov, export_stov, import_stov
 from mgtools.mc.tnof import decode_tnof, encode_tnof, export_tnof, import_tnof
+from mgtools.translation import TranslationFormat
 
 
 def _files(install: Path, pattern: str) -> list[Path]:
@@ -53,3 +55,17 @@ def test_every_keepfont_rebuilds_and_imports_back(
             assert encode_keepfont(font) == data
             export_keepfont(font, tmp_path / path.stem)
             assert encode_keepfont(import_keepfont(tmp_path / path.stem)) == data
+
+
+@pytest.mark.parametrize("fmt", list(TranslationFormat))
+def test_every_string_table_rebuilds_and_imports_back(
+    steam_dir: Path, tmp_path: Path, subtests: pytest.Subtests, fmt: TranslationFormat
+) -> None:
+    for path in _files(steam_dir, "EngineSupport/stov*.bin"):
+        with subtests.test(path.name):
+            data = path.read_bytes()
+            strings = decode_stov(data, path.name)
+            assert encode_stov(strings, path.name) == data
+            document = tmp_path / path.with_suffix(fmt.suffix).name
+            export_stov(strings, document, fmt, path.name)
+            assert encode_stov(import_stov(document), path.name) == data

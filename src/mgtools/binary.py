@@ -99,6 +99,10 @@ class BinaryReader:
         """Read an unsigned 32-bit integer."""
         return int(self.unpack("I")[0])
 
+    def u64(self) -> int:
+        """Read an unsigned 64-bit integer."""
+        return int(self.unpack("Q")[0])
+
     def _take(self, size: int) -> memoryview:
         """Return a view of the next size bytes and move past them."""
         if size < 0 or size > self.remaining:
@@ -172,6 +176,14 @@ class BinaryWriter:
             value: The integer to write.
         """
         self.pack("I", value)
+
+    def u64(self, value: int) -> None:
+        """Write an unsigned 64-bit integer.
+
+        Args:
+            value: The integer to write.
+        """
+        self.pack("Q", value)
 
     def getvalue(self) -> bytes:
         """Return the bytes written so far."""
