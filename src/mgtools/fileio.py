@@ -11,10 +11,15 @@ from typing import Any, BinaryIO
 
 from PIL import Image
 
+ORIGINAL_SUFFIX = ".orig"
+"""The suffix of the originals that replacing a file keeps."""
+
 
 @contextmanager
 def atomic_writer(path: Path) -> Iterator[BinaryIO]:
     """Open a temporary file that replaces path only when the block succeeds.
+
+    The file it replaces is kept where original_to_keep says.
 
     Args:
         path: The file to create or replace.
@@ -26,7 +31,15 @@ def atomic_writer(path: Path) -> Iterator[BinaryIO]:
             # mkstemp makes files only their owner can read; keep the usual ones.
             Path(temporary).chmod(_mode(path))
             yield stream
-        Path(temporary).replace(path)
+        # Moved aside only once the new data is complete, so a failure keeps the file in place.
+        if (original := original_to_keep(path)) is not None:
+            path.rename(original)
+        try:
+            Path(temporary).replace(path)
+        except BaseException:
+            if original is not None:
+                original.rename(path)
+            raise
     except BaseException:
         Path(temporary).unlink(missing_ok=True)
         raise
@@ -41,6 +54,19 @@ def write_atomically(path: Path, data: bytes) -> None:
     """
     with atomic_writer(path) as stream:
         stream.write(data)
+
+
+def original_to_keep(path: Path) -> Path | None:
+    """Return where replacing path keeps the file there, or None when it keeps none.
+
+    The first file replaced is kept beside path as <name>.orig; later ones are not kept, so
+    the .orig stays the file as it was before the first replacement.
+
+    Args:
+        path: The file to replace.
+    """
+    original = path.with_name(path.name + ORIGINAL_SUFFIX)
+    return original if path.is_file() and not original.exists() else None
 
 
 def write_png(path: Path, image: Image.Image, **options: Any) -> None:

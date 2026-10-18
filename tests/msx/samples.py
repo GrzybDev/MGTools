@@ -1,11 +1,14 @@
-"""Small invented fonts and text sections of the MSX games."""
+"""Small invented fonts, text sections and resource files of the MSX games."""
 
 import struct
 from collections.abc import Iterable, Sequence
 
 from mgtools.bitmap import pack_2bpp
 from mgtools.msx.charset import EU_CHARMAP, JP_CHARMAP
-from mgtools.msx.font import DoubleByteGlyph, Font, Glyph, Page
+from mgtools.msx.container import Container, Leaf, Node, encode_node, encode_nodes
+from mgtools.msx.font import DoubleByteGlyph, Font, Glyph, Page, encode_font
+from mgtools.msx.images import SCREEN_SIZE, IndexedImage, encode_image
+from mgtools.msx.palette import Colour, encode_palette
 
 
 def pixels(count: int, seed: int = 0) -> bytes:
@@ -155,3 +158,84 @@ MG2_BLOCKS = [
     strings([b"Results"]),
 ]
 """An MG2 text section: one list of strings for each of its 24 blocks."""
+
+FONT_PAGES = encode_font(text_font())
+SCREEN = bytes(SCREEN_SIZE[0] * SCREEN_SIZE[1] * 3) + b"\0\0"
+MG1_PALETTE: list[Colour] = [(255, 0, 255), (0, 0, 0), (200, 100, 50), (0, 0, 0)]
+MG1_RECTANGLES = bytes([0, 0, 1, 2, 3, 4, 1, 1, 5, 6, 7, 8])
+MG2_CELLS = encode_nodes([Leaf(bytes([3, 0, 1, 2, 3, 4])), Leaf(b"")])
+
+
+def image(width: int, height: int, data: bytes) -> Leaf:
+    """Return the leaf of an indexed image.
+
+    Args:
+        width: The image's width in pixels.
+        height: The image's height in pixels.
+        data: One palette index per pixel, row by row.
+    """
+    return Leaf(encode_image(IndexedImage(width, height, data)))
+
+
+def leaves(payloads: Iterable[bytes]) -> Container:
+    """Return a container of one leaf per payload.
+
+    Args:
+        payloads: The data of each leaf.
+    """
+    return Container(tuple(map(Leaf, payloads)))
+
+
+def mg1_file() -> bytes:
+    """Return an MG1 resource file: placeholder sections and sample images, texts and font."""
+    sections: list[Node] = [Container((Leaf(bytes([n])),)) for n in range(77)]
+    tiles = image(2, 1, bytes([1, 2]))
+    sections[0] = Container((Leaf(b"\x01\x03"), Leaf(b"\x00"), *[tiles] * 4))
+    sections[20] = Container((Container((Leaf(b"map"), Leaf(b"\x00"))),))
+    sections[40] = Container(
+        (
+            Container((Leaf(MG1_RECTANGLES), Leaf(b"animation"))),
+            Container(()),
+            Container((Leaf(b"8 bytes!"),)),
+        )
+    )
+    sections[41] = Container((image(2, 2, bytes([0, 3, 2, 3])), Leaf(b"")))
+    sections[42:71] = [Container((Leaf(b""),))] * 29
+    sections[72] = leaves(MG1_BLOCKS)
+    sections[74] = leaves([encode_palette(MG1_PALETTE)])
+    sections[75] = leaves(FONT_PAGES)
+    sections[76] = leaves([SCREEN])
+    return encode_node(Container(tuple(sections)))
+
+
+def mg2_palette(number: int) -> list[Colour]:
+    """Return a two-colour palette whose red is its number, to tell palettes apart.
+
+    Args:
+        number: The palette's number in its section.
+    """
+    return [(number, 0, 0), (number, 0, 1)]
+
+
+def mg2_file(sprite_sets: dict[int, set[int]]) -> bytes:
+    """Return an MG2 file of 36 one-pixel sprite sheets, loaded by the sprite sets.
+
+    Args:
+        sprite_sets: The sheets each sprite set loads, by the set's number.
+    """
+    sections: list[Node] = [Container((Leaf(bytes([n])),)) for n in range(49)]
+    sections[0] = Container((*[Leaf(b"animation")] * 42, Leaf(MG2_CELLS)))
+    table = bytearray(23 * 82)
+    for number, sheets in sprite_sets.items():
+        for sheet in sheets:
+            table[number * 82 + sheet] = 1
+    sections[1] = Container((*[Leaf(b"table")] * 6, Leaf(bytes(table))))
+    sections[2] = leaves(MG2_BLOCKS)
+    sections[24] = Container(tuple(image(1, 1, b"\x60") for _ in range(36)))
+    sections[25] = Container((image(1, 1, b"\xc0"),))
+    sections[26] = Container((image(1, 1, b"\xc1"), image(1, 1, b"\x7c")))
+    sections[27:46] = [Container((image(1, 1, b"\0"),))] * 19
+    sections[46] = leaves(encode_palette(mg2_palette(n)) for n in range(43))
+    sections[47] = leaves([SCREEN, SCREEN])
+    sections[48] = leaves(FONT_PAGES)
+    return encode_node(Container(tuple(sections)))

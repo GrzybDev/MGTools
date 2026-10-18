@@ -111,6 +111,15 @@ def import_font(game: Game, directory: Path) -> tuple[Font, Charset]:
     return Font(pages, tuple(map(DoubleByteGlyph, codes, glyphs, strict=True))), charset
 
 
+def read_charmap(path: Path) -> Charmap:
+    """Read the charmap of a font.json that export_font wrote.
+
+    Args:
+        path: The font.json to read.
+    """
+    return convert_json(path, _charmap)
+
+
 @dataclass(frozen=True, slots=True)
 class _Layout:
     """What font.json gives of a proportional page, which its image completes."""

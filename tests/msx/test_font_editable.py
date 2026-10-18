@@ -9,7 +9,7 @@ from mgtools.bitmap import unpack_2bpp
 from mgtools.fileio import read_json
 from mgtools.msx.charset import EU_CHARMAP, Charset
 from mgtools.msx.font import Font, Page, encode_font
-from mgtools.msx.font_editable import export_font, import_font
+from mgtools.msx.font_editable import export_font, import_font, read_charmap
 from mgtools.msx.game import Game
 from tests.editing import edit_json
 from tests.msx.samples import FONT, PADDED_FONT
@@ -76,6 +76,17 @@ def test_images_an_editor_turned_into_rgb_are_read_by_their_greys(
     font, _ = import_font(Game.MG1, tmp_path)
 
     assert encode_font(font) == encode_font(FONT)
+
+
+def test_the_charmap_of_an_export_can_be_read_alone(tmp_path: Path) -> None:
+    export_font(FONT, CHARSET, tmp_path)
+    edit_json(tmp_path / "font.json", lambda d: d["charmap"].update({"A0": "ą"}))
+
+    assert read_charmap(tmp_path / "font.json") == EU_CHARMAP | {0xA0: "ą"}
+
+    edit_json(tmp_path / "font.json", lambda d: d["charmap"].update({"41": "ł"}))
+    with pytest.raises(ValueError, match=r"font\.json: The charmap names 41"):
+        read_charmap(tmp_path / "font.json")
 
 
 def resize_page(index: int, size: tuple[int, int]) -> Callable[[Path], None]:
