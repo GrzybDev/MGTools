@@ -7,6 +7,7 @@ from mgtools.cli import app
 from mgtools.mc.ctxr import Texture, encode_texture
 from mgtools.mc.gcx.nodes import Block, Call
 from mgtools.mc.gcx.script import Proc, Script, encode_script
+from mgtools.mc.tri import Atlas, encode_atlas
 from tests.msx.samples import mg1_file
 
 SCRIPT = Script(True, 1, 0, (Proc(1, Block(())),), Block((Call(1),)), (), b"")
@@ -19,6 +20,7 @@ FILES = {
         encode_texture(Texture(7, 1, 1, (bytes(4),))),
         "texture.png",
     ),
+    "tri": ("atlas.tri", encode_atlas(Atlas(1, 1, 0, ())), "atlas.json"),
 }
 
 

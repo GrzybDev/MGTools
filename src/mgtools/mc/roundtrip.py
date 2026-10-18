@@ -69,3 +69,21 @@ def parse_colour(text: str) -> bytes:
         msg = f"{text!r} is not a colour written as #rrggbbaa"
         raise ValueError(msg)
     return bytes.fromhex(text[1:])
+
+
+def code_text(code: int) -> str:
+    """Write a strcode as the eight hex digits the files named after one use.
+
+    Args:
+        code: The strcode to write.
+    """
+    return f"{code:08x}"
+
+
+def parse_code(text: str) -> int:
+    """Read a strcode written in hex digits.
+
+    Args:
+        text: The strcode, as code_text writes it.
+    """
+    return int(text, 16)

@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from mgtools.mc import ctxr
+from mgtools.mc import ctxr, tri
 
 type Codec = tuple[
     Callable[[bytes], Any],
@@ -22,6 +22,10 @@ FORMATS: dict[str, tuple[str, Codec]] = {
             ctxr.export_texture,
             ctxr.import_texture,
         ),
+    ),
+    ".tri": (
+        ".json",
+        (tri.decode_atlas, tri.encode_atlas, tri.export_atlas, tri.import_atlas),
     ),
 }
 
