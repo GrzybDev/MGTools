@@ -1,11 +1,27 @@
 """Edits of exported files made the way people and their tools make them."""
 
-from collections.abc import Mapping
+import json
+from collections.abc import Callable, Mapping
+from pathlib import Path
+from typing import Any
 
 from lxml import etree
 from translate.storage.pypo import pofile
 
+from mgtools.fileio import read_json
 from mgtools.translation import TranslationFormat
+
+
+def edit_json(path: Path, edit: Callable[[Any], object]) -> None:
+    """Change an exported JSON file in place.
+
+    Args:
+        path: The JSON file to change.
+        edit: Changes the value read from the file, which is then written back.
+    """
+    document = read_json(path)
+    edit(document)
+    path.write_text(json.dumps(document), encoding="utf-8")
 
 
 def with_targets(data: bytes, fmt: TranslationFormat, targets: Mapping[str, str]) -> bytes:

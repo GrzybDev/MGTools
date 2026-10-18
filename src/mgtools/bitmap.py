@@ -4,11 +4,15 @@ A stream packs four pixels per byte, the first in the two highest bits, with no
 padding between rows. In PNGs the values 0 to 3 show as four levels of grey.
 """
 
+from collections.abc import Sequence
 from itertools import batched
+from math import ceil
+from pathlib import Path
 
 from PIL import Image
 
-from mgtools.errors import FormatError
+from mgtools.errors import FormatError, located
+from mgtools.fileio import read_image
 
 _GREYS = (0, 85, 170, 255)
 GREY_PALETTE = bytes(level for level in _GREYS for _ in range(3))
@@ -88,3 +92,51 @@ def grey_pixels(image: Image.Image, box: tuple[int, int, int, int] | None = None
         msg = f"The pixel at ({x}, {y}) {problem}: 2-bit pixels take values 0 to 3"
         raise ValueError(msg)
     return values
+
+
+def glyph_sheet(
+    glyphs: Sequence[bytes], size: int, columns: int, background: int = 0
+) -> Image.Image:
+    """Return square glyphs drawn left to right in rows, as an image of greys.
+
+    Args:
+        glyphs: The stream of each glyph.
+        size: The width and height of a glyph in pixels.
+        columns: How many glyphs a row holds.
+        background: The palette index of the image around the glyphs.
+    """
+    width, height = _sheet_size(len(glyphs), size, columns)
+    sheet = grey_image(bytes((background,)) * (width * height), (width, height))
+    for index, data in enumerate(glyphs):
+        glyph = grey_image(unpack_2bpp(data, size * size), (size, size))
+        sheet.paste(glyph, _cell(index, size, columns)[:2])
+    return sheet
+
+
+def read_glyph_sheet(path: Path, count: int, size: int, columns: int) -> list[bytes]:
+    """Return the stream of each glyph of a PNG that glyph_sheet drew.
+
+    Args:
+        path: The PNG to read.
+        count: How many glyphs the image holds.
+        size: The width and height of a glyph in pixels.
+        columns: How many glyphs a row holds.
+    """
+    sheet = read_image(path, _sheet_size(count, size, columns))
+    glyphs = []
+    for index in range(count):
+        with located(f"{path}, glyph {index}"):
+            glyphs.append(pack_2bpp(grey_pixels(sheet, _cell(index, size, columns))))
+    return glyphs
+
+
+def _sheet_size(count: int, size: int, columns: int) -> tuple[int, int]:
+    # An image without glyphs keeps one row, as a PNG cannot be empty.
+    return columns * size, max(1, ceil(count / columns)) * size
+
+
+def _cell(index: int, size: int, columns: int) -> tuple[int, int, int, int]:
+    """Return the box of a glyph in a sheet: its left, top, right and bottom."""
+    row, column = divmod(index, columns)
+    left, top = column * size, row * size
+    return left, top, left + size, top + size

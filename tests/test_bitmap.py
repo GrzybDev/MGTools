@@ -1,7 +1,16 @@
+from pathlib import Path
+
 import pytest
 from PIL import Image
 
-from mgtools.bitmap import grey_image, grey_pixels, pack_2bpp, unpack_2bpp
+from mgtools.bitmap import (
+    glyph_sheet,
+    grey_image,
+    grey_pixels,
+    pack_2bpp,
+    read_glyph_sheet,
+    unpack_2bpp,
+)
 from mgtools.errors import FormatError
 
 GREYS = [(0, 0, 0), (85, 85, 85), (170, 170, 170), (255, 255, 255)]
@@ -86,3 +95,17 @@ def test_indexed_images_give_their_indices_up_to_3() -> None:
     with pytest.raises(ValueError, match=r"\(1, 0\) has palette index 7"):
         grey_pixels(image)
     assert grey_pixels(image, (0, 0, 1, 1)) == bytes([3])
+
+
+def test_glyph_sheets_draw_glyphs_in_rows_on_a_background_and_read_them_back(
+    tmp_path: Path,
+) -> None:
+    glyphs = [pack_2bpp(bytes([value]) * 4) for value in (0, 1, 2)]
+    path = tmp_path / "glyphs.png"
+
+    sheet = glyph_sheet(glyphs, 2, 2, background=3)
+    sheet.save(path)
+
+    assert sheet.size == (4, 4)
+    assert sheet.tobytes() == bytes([0, 0, 1, 1] * 2 + [2, 2, 3, 3] * 2)
+    assert read_glyph_sheet(path, 3, 2, 2) == glyphs
