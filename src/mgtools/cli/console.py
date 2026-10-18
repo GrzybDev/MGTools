@@ -48,3 +48,12 @@ def done(message: str) -> None:
         message: What the step did.
     """
     console.print(f"[green]{escape(message)}[/]")
+
+
+def warn(message: str) -> None:
+    """Print a warning to the standard error.
+
+    Args:
+        message: The warning's text.
+    """
+    error_console.print(f"[yellow]Warning:[/] {escape(message)}")

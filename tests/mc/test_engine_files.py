@@ -11,10 +11,26 @@ from mgtools.mc.keepfont import (
     export_keepfont,
     import_keepfont,
 )
+from mgtools.mc.manifest import Controller, Language, Region, listed_files
 from mgtools.mc.sdx import decode_sdx, encode_sdx, export_sdx, import_sdx
 from mgtools.mc.stov import decode_stov, encode_stov, export_stov, import_stov
 from mgtools.mc.tnof import decode_tnof, encode_tnof, export_tnof, import_tnof
 from mgtools.translation import TranslationFormat
+
+LAUNCHER_CHOICES = [
+    *(
+        (language, region)
+        for language in (
+            Language.ENGLISH,
+            Language.FRENCH,
+            Language.GERMAN,
+            Language.ITALIAN,
+            Language.SPANISH,
+        )
+        for region in (Region.USA, Region.EUROPE)
+    ),
+    (Language.JAPANESE, Region.JAPAN),
+]
 
 
 def _files(install: Path, pattern: str) -> list[Path]:
@@ -82,3 +98,14 @@ def test_every_sound_bank_file_rebuilds_and_imports_back(
             assert encode_sdx(sound_banks) == data
             export_sdx(sound_banks, tmp_path / str(index))
             assert encode_sdx(import_sdx(tmp_path / str(index))) == data
+
+
+def test_every_listed_file_exists_in_each_launcher_language(
+    steam_dir: Path, subtests: pytest.Subtests
+) -> None:
+    for language, region in LAUNCHER_CHOICES:
+        for controller in Controller:
+            with subtests.test(f"{language} {region} {controller}"):
+                entries = listed_files(steam_dir, language, region, controller)
+                assert entries
+                assert [entry for entry in entries if entry.found is None] == []
