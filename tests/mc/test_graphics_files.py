@@ -5,6 +5,8 @@ from typing import Any
 import pytest
 
 from mgtools.mc import cfon, ctxr, tri
+from mgtools.mc.la2.codec import decode_layout, encode_layout
+from mgtools.mc.la2.editable import export_layout, import_layout
 
 type Codec = tuple[
     Callable[[bytes], Any],
@@ -26,6 +28,10 @@ FORMATS: dict[str, tuple[str, Codec]] = {
     ".tri": (
         ".json",
         (tri.decode_atlas, tri.encode_atlas, tri.export_atlas, tri.import_atlas),
+    ),
+    ".la2": (
+        ".json",
+        (decode_layout, encode_layout, export_layout, import_layout),
     ),
     ".cfon": (
         ".json",

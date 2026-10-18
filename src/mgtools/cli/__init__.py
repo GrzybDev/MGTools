@@ -2,13 +2,14 @@
 
 import typer
 
-from mgtools.cli import cfon, ctxr, gcx, resource, tri
+from mgtools.cli import cfon, ctxr, gcx, la2, resource, tri
 
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(resource.app, name="resource")
 app.add_typer(gcx.app, name="gcx")
 app.add_typer(ctxr.app, name="ctxr")
 app.add_typer(tri.app, name="tri")
+app.add_typer(la2.app, name="la2")
 app.add_typer(cfon.app, name="cfon")
 
 
