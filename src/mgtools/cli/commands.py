@@ -69,16 +69,20 @@ def refuse_existing(path: Path) -> None:
 
 
 @contextmanager
-def exporting(file: Path, output: Path | None, suffix: str) -> Iterator[Path]:
+def exporting(
+    file: Path, output: Path | None, suffix: str, beside: tuple[str, ...] = ()
+) -> Iterator[Path]:
     """Report the export of a file while the block writes it, yielding where it goes.
 
     Args:
         file: The game file to export.
         output: The file or folder to write, or None for the one output_path names.
         suffix: The suffix of that default, empty for a folder.
+        beside: The suffixes of the files the export also writes next to the output.
     """
     output = output or output_path(file, suffix)
-    refuse_existing(output)
+    for path in (output, *(output.with_suffix(other) for other in beside)):
+        refuse_existing(path)
     with working(f"Exporting {file}"):
         yield output
     done(f"Exported {file} to {output}")
@@ -133,6 +137,54 @@ def add_import_command(
     ) -> None:
         with importing(source, output, suffix) as target:
             write_atomically(target, build(source))
+
+
+def add_commands[M](
+    app: typer.Typer,
+    *,
+    suffix: str,
+    editable_suffix: str,
+    decode: Callable[[bytes], M],
+    encode: Callable[[M], bytes],
+    export: Callable[[M, Path], None],
+    import_: Callable[[Path], M],
+    export_help: str,
+    import_help: str,
+    beside: tuple[str, ...] = (),
+) -> None:
+    """Add the commands between files of suffix and their editable form.
+
+    Args:
+        app: The command group to add the commands to.
+        suffix: The suffix of the game files.
+        editable_suffix: The suffix of the editable file, empty for a folder.
+        decode: Decode the contents of a game file.
+        encode: Encode a decoded game file back to its contents.
+        export: Write a decoded game file in its editable form at a path.
+        import_: Read a decoded game file from its editable form at a path.
+        export_help: The help of the export command.
+        import_help: The help of the import command.
+        beside: The suffixes of the files the export also writes next to the editable file.
+    """
+
+    @app.command(name="export", help=export_help)
+    @reports_errors
+    def export_command(
+        file: Annotated[Path, input_argument(f"The {suffix} file")],
+        output: Annotated[
+            Path | None, output_argument(f"The {_editable(editable_suffix)} to write")
+        ] = None,
+    ) -> None:
+        with exporting(file, output, editable_suffix, beside) as target:
+            export(decode(file.read_bytes()), target)
+
+    add_import_command(
+        app,
+        suffix=suffix,
+        editable_suffix=editable_suffix,
+        build=lambda source: encode(import_(source)),
+        help_text=import_help,
+    )
 
 
 def _editable(editable_suffix: str) -> str:

@@ -4,6 +4,7 @@ import pytest
 from typer.testing import CliRunner
 
 from mgtools.cli import app
+from mgtools.mc.ctxr import Texture, encode_texture
 from mgtools.mc.gcx.nodes import Block, Call
 from mgtools.mc.gcx.script import Proc, Script, encode_script
 from tests.msx.samples import mg1_file
@@ -13,6 +14,11 @@ SCRIPT = Script(True, 1, 0, (Proc(1, Block(())),), Block((Call(1),)), (), b"")
 FILES = {
     "resource": ("english.raw", mg1_file(), "english"),
     "gcx": ("scenerio.gcx", encode_script(SCRIPT), "scenerio"),
+    "ctxr": (
+        "texture.ctxr",
+        encode_texture(Texture(7, 1, 1, (bytes(4),))),
+        "texture.png",
+    ),
 }
 
 
@@ -50,6 +56,18 @@ def test_exports_import_back_next_to_the_file_keeping_edits_and_the_original(
     assert "Kept the original" not in import_again.output
     assert path.read_bytes() == data
     assert path.with_name(f"{name}.orig").read_bytes() == data
+
+
+def test_texture_exports_refuse_the_settings_of_an_earlier_export(tmp_path: Path) -> None:
+    name, data, _ = FILES["ctxr"]
+    (tmp_path / name).write_bytes(data)
+    (tmp_path / "texture.json").write_text("{}")
+
+    result = CliRunner().invoke(app, ["ctxr", "export", str(tmp_path / name)])
+
+    assert result.exit_code == 1
+    assert "texture.json already exists" in result.output
+    assert not (tmp_path / "texture.png").exists()
 
 
 def test_a_folder_imports_from_inside_it_next_to_itself(

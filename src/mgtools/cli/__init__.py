@@ -2,11 +2,12 @@
 
 import typer
 
-from mgtools.cli import gcx, resource
+from mgtools.cli import ctxr, gcx, resource
 
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(resource.app, name="resource")
 app.add_typer(gcx.app, name="gcx")
+app.add_typer(ctxr.app, name="ctxr")
 
 
 @app.callback()
