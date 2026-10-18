@@ -10,6 +10,7 @@ from mgtools.mc.gcx.nodes import Block, Call
 from mgtools.mc.gcx.script import Proc, Script, encode_script
 from mgtools.mc.la2.codec import encode_layout
 from mgtools.mc.la2.model import Layout, Node
+from mgtools.mc.tnof import Glyph, TnofFont, encode_tnof
 from mgtools.mc.tri import Atlas, encode_atlas
 from tests.msx.samples import mg1_file
 
@@ -28,6 +29,11 @@ FILES = {
     "tri": ("atlas.tri", encode_atlas(Atlas(1, 1, 0, ())), "atlas.json"),
     "la2": ("layout.la2", encode_layout(ROOT_ONLY), "layout.json"),
     "cfon": ("console.cfon", encode_font(ASCII_ONLY), "console.json"),
+    "tnof": (
+        "MGS_Font.raw",
+        encode_tnof(TnofFont((1, 2, 3), (Glyph(0x41, 1, 1, 0, 0, 2, b"\xff"),))),
+        "MGS_Font",
+    ),
 }
 
 

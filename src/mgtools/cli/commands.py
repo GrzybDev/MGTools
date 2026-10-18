@@ -166,13 +166,15 @@ def add_commands[M](
         import_help: The help of the import command.
         beside: The suffixes of the files the export also writes next to the editable file.
     """
+    folder = not editable_suffix
 
     @app.command(name="export", help=export_help)
     @reports_errors
     def export_command(
         file: Annotated[Path, input_argument(f"The {suffix} file")],
         output: Annotated[
-            Path | None, output_argument(f"The {_editable(editable_suffix)} to write")
+            Path | None,
+            output_argument(f"The {_editable(editable_suffix, new=True)} to write", folder=folder),
         ] = None,
     ) -> None:
         with exporting(file, output, editable_suffix, beside) as target:
@@ -187,10 +189,13 @@ def add_commands[M](
     )
 
 
-def _editable(editable_suffix: str) -> str:
+def _editable(editable_suffix: str, *, new: bool = False) -> str:
     """Return the name of the editable form in an argument's help: a file or a folder.
 
     Args:
         editable_suffix: The suffix of the editable file, empty for a folder.
+        new: Name the folder an export writes, which has to be new or empty.
     """
-    return f"{editable_suffix} file" if editable_suffix else "folder"
+    if editable_suffix:
+        return f"{editable_suffix} file"
+    return "new or empty folder" if new else "folder"
