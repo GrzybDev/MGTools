@@ -4,11 +4,15 @@ import pytest
 from typer.testing import CliRunner
 
 from mgtools.cli import app
+from mgtools.mc.gcx.nodes import Block, Call
+from mgtools.mc.gcx.script import Proc, Script, encode_script
 from tests.msx.samples import mg1_file
 
+SCRIPT = Script(True, 1, 0, (Proc(1, Block(())),), Block((Call(1),)), (), b"")
 # A small file of each group, and the name its export gets by default.
 FILES = {
     "resource": ("english.raw", mg1_file(), "english"),
+    "gcx": ("scenerio.gcx", encode_script(SCRIPT), "scenerio"),
 }
 
 
