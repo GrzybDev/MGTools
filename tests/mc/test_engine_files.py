@@ -11,6 +11,7 @@ from mgtools.mc.keepfont import (
     export_keepfont,
     import_keepfont,
 )
+from mgtools.mc.sdx import decode_sdx, encode_sdx, export_sdx, import_sdx
 from mgtools.mc.stov import decode_stov, encode_stov, export_stov, import_stov
 from mgtools.mc.tnof import decode_tnof, encode_tnof, export_tnof, import_tnof
 from mgtools.translation import TranslationFormat
@@ -69,3 +70,15 @@ def test_every_string_table_rebuilds_and_imports_back(
             document = tmp_path / path.with_suffix(fmt.suffix).name
             export_stov(strings, document, fmt, path.name)
             assert encode_stov(import_stov(document), path.name) == data
+
+
+def test_every_sound_bank_file_rebuilds_and_imports_back(
+    steam_dir: Path, tmp_path: Path, subtests: pytest.Subtests
+) -> None:
+    for index, path in enumerate(_files(steam_dir, "*/stage/*/*.sdx")):
+        with subtests.test(path.relative_to(steam_dir).as_posix()):
+            data = path.read_bytes()
+            sound_banks = decode_sdx(data)
+            assert encode_sdx(sound_banks) == data
+            export_sdx(sound_banks, tmp_path / str(index))
+            assert encode_sdx(import_sdx(tmp_path / str(index))) == data

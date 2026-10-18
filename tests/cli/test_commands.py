@@ -11,6 +11,7 @@ from mgtools.mc.gcx.script import Proc, Script, encode_script
 from mgtools.mc.keepfont import Keepfont, LatinGlyph, encode_keepfont
 from mgtools.mc.la2.codec import encode_layout
 from mgtools.mc.la2.model import Layout, Node
+from mgtools.mc.sdx import Bank, SoundBanks, encode_sdx
 from mgtools.mc.stov import StovString, encode_stov
 from mgtools.mc.tnof import Glyph, TnofFont, encode_tnof
 from mgtools.mc.tri import Atlas, encode_atlas
@@ -19,6 +20,7 @@ from tests.msx.samples import mg1_file
 SCRIPT = Script(True, 1, 0, (Proc(1, Block(())),), Block((Call(1),)), (), b"")
 ROOT_ONLY = Layout(0, (), (0,) * 5, (Node(1, 0, 0, 1),), (), (), (), (), (), (), (), ())
 ASCII_ONLY = ConsoleFont(((0, 0, 1, 1),), {chr(code): 0 for code in range(128)}, "")
+NO_TABLES = {b"IA3P": b"", b"TPAT": b"", b"IPAT": b""}
 # A small file of each group, and the name its export gets by default.
 FILES = {
     "resource": ("english.raw", mg1_file(), "english"),
@@ -45,6 +47,11 @@ FILES = {
         "stovc.bin",
         encode_stov([StovString(1, "en", "Hi")], "stovc"),
         "stovc.xlf",
+    ),
+    "sdx": (
+        "pk001.sdx",
+        encode_sdx(SoundBanks((Bank(0, NO_TABLES, (), ()),), b"")),
+        "pk001",
     ),
 }
 
