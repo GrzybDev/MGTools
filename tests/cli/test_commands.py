@@ -4,6 +4,7 @@ import pytest
 from typer.testing import CliRunner
 
 from mgtools.cli import app
+from mgtools.mc.cfon import ConsoleFont, encode_font
 from mgtools.mc.ctxr import Texture, encode_texture
 from mgtools.mc.gcx.nodes import Block, Call
 from mgtools.mc.gcx.script import Proc, Script, encode_script
@@ -11,6 +12,7 @@ from mgtools.mc.tri import Atlas, encode_atlas
 from tests.msx.samples import mg1_file
 
 SCRIPT = Script(True, 1, 0, (Proc(1, Block(())),), Block((Call(1),)), (), b"")
+ASCII_ONLY = ConsoleFont(((0, 0, 1, 1),), {chr(code): 0 for code in range(128)}, "")
 # A small file of each group, and the name its export gets by default.
 FILES = {
     "resource": ("english.raw", mg1_file(), "english"),
@@ -21,6 +23,7 @@ FILES = {
         "texture.png",
     ),
     "tri": ("atlas.tri", encode_atlas(Atlas(1, 1, 0, ())), "atlas.json"),
+    "cfon": ("console.cfon", encode_font(ASCII_ONLY), "console.json"),
 }
 
 

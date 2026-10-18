@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from mgtools.mc import ctxr, tri
+from mgtools.mc import cfon, ctxr, tri
 
 type Codec = tuple[
     Callable[[bytes], Any],
@@ -26,6 +26,10 @@ FORMATS: dict[str, tuple[str, Codec]] = {
     ".tri": (
         ".json",
         (tri.decode_atlas, tri.encode_atlas, tri.export_atlas, tri.import_atlas),
+    ),
+    ".cfon": (
+        ".json",
+        (cfon.decode_font, cfon.encode_font, cfon.export_font, cfon.import_font),
     ),
 }
 
