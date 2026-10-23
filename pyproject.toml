@@ -1,7 +1,7 @@
 [project]
 name = "mgtools"
 version = "0.1.0"
-description = ""
+description = "Converts the files of the PC releases of Metal Gear and Metal Gear 2: Solid Snake to editable forms and back"
 authors = [
     {name = "Marek Grzyb",email = "marek@grzyb.dev"}
 ]
