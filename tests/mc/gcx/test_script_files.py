@@ -4,7 +4,11 @@ import pytest
 
 from mgtools.mc.gcx.editable import export_script, import_script
 from mgtools.mc.gcx.script import decode_script, encode_script
+from mgtools.mc.gcx.strcode import strcode
 from mgtools.translation import TranslationFormat
+
+# Dictionary names that hash like built-in ones replace them throughout every other script.
+NAMES = {strcode("if"): "jF", strcode("print"): "prioT"}
 
 
 def test_every_script_rebuilds_byte_for_byte_and_from_its_directory(
@@ -25,6 +29,7 @@ def test_every_script_rebuilds_byte_for_byte_and_from_its_directory(
                 formats[number % len(formats)],
                 original=path.name,
                 source_language="en",
+                names=NAMES if number % 2 else None,
             )
 
             assert encode_script(script) == data

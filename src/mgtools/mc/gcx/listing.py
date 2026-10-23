@@ -5,10 +5,12 @@ its number of glyphs. It then holds the procs in the order the file stores them,
 main, and the resources in order: strings in the markup of the PS2 encoding and
 lists of values, each followed by a comment with the res: number code refers to
 it by. Statements end with a semicolon; whitespace and // comments are free.
-Names are printed as such when known, else as their strcode: #0C4FAF.
+Names are printed as such when known, built in or from a dictionary, else as
+their strcode: #0C4FAF.
 """
 
 import re
+from collections.abc import Mapping
 
 from mgtools.mc.gcx.legacy import decode_legacy
 from mgtools.mc.gcx.nodes import (
@@ -83,12 +85,15 @@ _COMMAND_START = re.compile(r"[A-Za-z_#]")
 _ESCAPES = {"\\": "\\\\", '"': '\\"', "\n": "\\n"}
 
 
-def format_listing(script: Script) -> str:
+def format_listing(script: Script, names: Mapping[int, str] | None = None) -> str:
     """Return the listing of a script, without its UTF-8 texts and glyph pixels.
 
     Args:
         script: The script to list.
+        names: Names to write for strcodes, taking precedence over the built-in ones; each
+            must hash to its strcode, as read_dictionary ensures, for the listing to compile back.
     """
+    lister = _Lister({**_NAMES, **(names or {})})
     lines = [
         f"gcx {'bluepoint' if script.bluepoint else 'plain'}",
         f"timestamp 0x{script.timestamp:08X}",
@@ -98,94 +103,100 @@ def format_listing(script: Script) -> str:
     lines.append(f"glyphs {len(script.glyphs) // GLYPH_BYTES}")
     for proc in script.procs:
         language = f" lang 0x{proc.language:02X}" if proc.language else ""
-        lines += ["", f"proc {proc.id}{language} {_block(proc.body, 0)}"]
-    lines += ["", f"main {_block(script.main, 0)}", ""]
+        lines += ["", f"proc {proc.id}{language} {lister.block(proc.body, 0)}"]
+    lines += ["", f"main {lister.block(script.main, 0)}", ""]
     for index, resource in enumerate(script.resources):
         match resource:
             case StringResource(legacy):
                 text = f"string {_quote(decode_legacy(legacy))}"
             case DataResource(values):
-                text = f"data {{{_values(values, 0)}}}"
+                text = f"data {{{lister.values(values, 0)}}}"
         lines.append(f"{text}  // res:{index}")
     return "\n".join(lines) + "\n"
 
 
-def _block(block: Block, depth: int) -> str:
-    """Return a block in braces, its statements one level deeper than depth."""
-    if not block.statements:
-        return "{}"
-    inner = _INDENT * (depth + 1)
-    lines = "".join(f"{inner}{_statement(s, depth + 1)};\n" for s in block.statements)
-    return f"{{\n{lines}{_INDENT * depth}}}"
+class _Lister:
+    """Writes code, naming the strcodes it has names for."""
 
+    def __init__(self, names: Mapping[int, str]) -> None:
+        self._names = names
 
-def _statement(statement: Statement, depth: int) -> str:
-    """Return a statement without its semicolon, its blocks indented from depth."""
-    match statement:
-        case Call(proc, args):
-            target = f"@0x{proc:04X}" if proc & _LANGUAGE_CALL else f"@{proc}"
-            words = [target, _values(args, depth)]
-        case Command(code, args, options):
-            words = [_name(code), _values(args, depth)]
-            for option in options:
-                words += [f"-{option.letter}", _values(option.values, depth)]
-        case Expression(root):
-            text = _operand(root, depth)
-            # Else the statement would read as a command.
-            return f"({text})" if _COMMAND_START.match(text) else text
-    return " ".join(word for word in words if word)
+    def block(self, block: Block, depth: int) -> str:
+        """Return a block in braces, its statements one level deeper than depth."""
+        if not block.statements:
+            return "{}"
+        inner = _INDENT * (depth + 1)
+        lines = "".join(f"{inner}{self.statement(s, depth + 1)};\n" for s in block.statements)
+        return f"{{\n{lines}{_INDENT * depth}}}"
 
+    def statement(self, statement: Statement, depth: int) -> str:
+        """Return a statement without its semicolon, its blocks indented from depth."""
+        match statement:
+            case Call(proc, args):
+                target = f"@0x{proc:04X}" if proc & _LANGUAGE_CALL else f"@{proc}"
+                words = [target, self.values(args, depth)]
+            case Command(code, args, options):
+                words = [self.name(code), self.values(args, depth)]
+                for option in options:
+                    words += [f"-{option.letter}", self.values(option.values, depth)]
+            case Expression(root):
+                text = self.operand(root, depth)
+                # Else the statement would read as a command.
+                return f"({text})" if _COMMAND_START.match(text) else text
+        return " ".join(word for word in words if word)
 
-def _values(values: tuple[Value, ...], depth: int) -> str:
-    """Return values separated by spaces, their blocks indented from depth."""
-    return " ".join(_value(value, depth) for value in values)
+    def values(self, values: tuple[Value, ...], depth: int) -> str:
+        """Return values separated by spaces, their blocks indented from depth."""
+        return " ".join(self.value(value, depth) for value in values)
 
+    def value(self, value: Value, depth: int) -> str:
+        """Return a value as the listing writes it, its blocks indented from depth."""
+        match value:
+            case Int(number):
+                return str(number)
+            case Symbol(number):
+                return f"t:0x{number:08X}"
+            case StrCode(code):
+                return self.name(code)
+            case String(data):
+                return _quote(_inline_text(data))
+            case ProcRef(proc):
+                return f"&{proc}"
+            case ResourceRef(index):
+                return f"res:{index}"
+            case Argument(index):
+                return f"$arg{index}"
+            case Variable():
+                return _variable(value, "")
+            case Element(variable, size, index):
+                sized = _variable(variable, f":{self.value(size, depth)}")
+                return f"{sized}[{self.value(index, depth)}]"
+            case Expression(root):
+                return f"({self.operand(root, depth)})"
+            case Block():
+                return self.block(value, depth)
 
-def _value(value: Value, depth: int) -> str:
-    """Return a value as the listing writes it, its blocks indented from depth."""
-    match value:
-        case Int(number):
-            return str(number)
-        case Symbol(number):
-            return f"t:0x{number:08X}"
-        case StrCode(code):
-            return _name(code)
-        case String(data):
-            return _quote(_inline_text(data))
-        case ProcRef(proc):
-            return f"&{proc}"
-        case ResourceRef(index):
-            return f"res:{index}"
-        case Argument(index):
-            return f"$arg{index}"
-        case Variable():
-            return _variable(value, "")
-        case Element(variable, size, index):
-            sized = _variable(variable, f":{_value(size, depth)}")
-            return f"{sized}[{_value(index, depth)}]"
-        case Expression(root):
-            return f"({_operand(root, depth)})"
-        case Block():
-            return _block(value, depth)
+    def operand(self, operand: Operand, depth: int, outer: int = -1, on_right: bool = False) -> str:
+        """Return an operand, in parentheses where the operator around it needs them."""
+        match operand:
+            case Unary(operator, inner):
+                return f"{UNARY_OPERATORS[operator]}({self.operand(inner, depth)})"
+            case Binary(operator, left, right):
+                symbol, rank = BINARY_OPERATORS[operator]
+                text = (
+                    f"{self.operand(left, depth, rank)} {symbol} "
+                    f"{self.operand(right, depth, rank, on_right=True)}"
+                )
+                # Assignments group from the right, the other operators from the left.
+                grouped_right = operator is Operator.ASSIGN
+                if rank < outer or (rank == outer and on_right != grouped_right):
+                    return f"({text})"
+                return text
+        return self.value(operand, depth)
 
-
-def _operand(operand: Operand, depth: int, outer: int = -1, on_right: bool = False) -> str:
-    """Return an operand, in parentheses where the operator around it needs them."""
-    match operand:
-        case Unary(operator, inner):
-            return f"{UNARY_OPERATORS[operator]}({_operand(inner, depth)})"
-        case Binary(operator, left, right):
-            symbol, rank = BINARY_OPERATORS[operator]
-            text = (
-                f"{_operand(left, depth, rank)} {symbol} "
-                f"{_operand(right, depth, rank, on_right=True)}"
-            )
-            # Assignments group from the right, the other operators from the left.
-            grouped_right = operator is Operator.ASSIGN
-            if rank < outer or (rank == outer and on_right != grouped_right):
-                return f"({text})"
-            return text
-    return _value(operand, depth)
+    def name(self, code: int) -> str:
+        """Return the name of a strcode, or the strcode itself after # when it has none."""
+        return self._names.get(code, f"#{code:06X}")
 
 
 def _variable(variable: Variable, size: str) -> str:
@@ -193,11 +204,6 @@ def _variable(variable: Variable, size: str) -> str:
     bit = f".{variable.bit}" if variable.type is VariableType.FLAG else ""
     letters = REGION_LETTERS[variable.region] + TYPE_LETTERS[variable.type]
     return f"${letters}[0x{variable.offset:04X}{bit}{size}]"
-
-
-def _name(code: int) -> str:
-    """Return the known name of a strcode, or the strcode itself after #."""
-    return _NAMES.get(code, f"#{code:06X}")
 
 
 def _inline_text(data: bytes) -> str:

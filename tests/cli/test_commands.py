@@ -6,8 +6,9 @@ from typer.testing import CliRunner
 from mgtools.cli import app
 from mgtools.mc.cfon import ConsoleFont, encode_font
 from mgtools.mc.ctxr import Texture, encode_texture
-from mgtools.mc.gcx.nodes import Block, Call
+from mgtools.mc.gcx.nodes import Block, Call, Command, StrCode
 from mgtools.mc.gcx.script import Proc, Script, encode_script
+from mgtools.mc.gcx.strcode import strcode
 from mgtools.mc.keepfont import Keepfont, LatinGlyph, encode_keepfont
 from mgtools.mc.la2.codec import encode_layout
 from mgtools.mc.la2.model import Layout, Node
@@ -162,6 +163,39 @@ def test_resource_exports_can_save_each_glyph_as_its_own_image(tmp_path: Path) -
     assert not (tmp_path / "english/font/page0.png").exists()
     assert import_.exit_code == 0, import_.output
     assert (tmp_path / "english.raw").read_bytes() == mg1_file()
+
+
+def test_script_exports_name_strcodes_from_the_usable_lines_of_a_dictionary(
+    tmp_path: Path,
+) -> None:
+    script = Script(
+        False, 1, 0, (), Block((Command(strcode("lamp"), (StrCode(0x966474),)),)), (), b""
+    )
+    path = tmp_path / "scenerio.gcx"
+    path.write_bytes(encode_script(script))
+    dictionary = tmp_path / "names.txt"
+    dictionary.write_bytes(
+        b"strcode name\n379210 lamp // a light\n966474 open_dor\n000D86 if\n000D86 jF\n"
+        b"379210 lamq\n"
+    )
+    runner = CliRunner()
+
+    exported = runner.invoke(app, ["gcx", "export", str(path), "--dictionary", str(dictionary)])
+    listing = (tmp_path / "scenerio" / "script.gcl").read_bytes()
+    rebuilt = tmp_path / "rebuilt.gcx"
+    imported = runner.invoke(app, ["gcx", "import", str(tmp_path / "scenerio"), str(rebuilt)])
+
+    assert exported.exit_code == 0, exported.output
+    assert (
+        "names.txt: skipped 4 lines that a listing cannot use:\n"
+        "  Line 1: 'strcode' is not a strcode of up to six hex digits\n"
+        "  Line 3: open_dor hashes to #14B323, not #966474\n"
+        "  Line 5: #000D86 already has the name if\n"
+        "  and 1 more\n"
+    ) in exported.output
+    assert b"main {\n    lamp #966474;\n}" in listing
+    assert imported.exit_code == 0, imported.output
+    assert rebuilt.read_bytes() == path.read_bytes()
 
 
 def test_errors_end_the_command_with_a_message_and_write_nothing(

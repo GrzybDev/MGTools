@@ -4,6 +4,7 @@ The listing holds the code and the resources, a translation document the UTF-8
 texts of a Bluepoint file, and a PNG the glyphs.
 """
 
+from collections.abc import Mapping
 from dataclasses import replace
 from itertools import batched
 from pathlib import Path
@@ -42,6 +43,7 @@ def export_script(
     *,
     original: str,
     source_language: str,
+    names: Mapping[int, str] | None = None,
 ) -> None:
     """Write the editable form of a script, naming its file and texts' language.
 
@@ -51,8 +53,9 @@ def export_script(
         fmt: The format of the translation document of the texts.
         original: The name of the script's file, which the document records.
         source_language: The language of the texts, which the document records.
+        names: Names for the listing to write for strcodes, such as those of read_dictionary.
     """
-    write_atomically(directory / LISTING, format_listing(script).encode())
+    write_atomically(directory / LISTING, format_listing(script, names).encode())
     units = [
         Unit(f"res:{index}", resource.text, _notes(resource))
         for index, resource in enumerate(script.resources)

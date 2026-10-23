@@ -73,6 +73,16 @@ def parse_listing(text: str) -> Script:
     return _Parser(text).script()
 
 
+def is_name(text: str) -> bool:
+    """Return whether a listing reads text as a name, which compiles to its strcode.
+
+    Args:
+        text: The text to check.
+    """
+    match = _TOKEN.fullmatch(text)
+    return match is not None and match.lastgroup == "name"
+
+
 @dataclass(frozen=True, slots=True)
 class _Token:
     kind: str
