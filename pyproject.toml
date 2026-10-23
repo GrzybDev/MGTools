@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-mgtools = "mgtools.cli:app"
+mgtools = "mgtools.cli:run"
 
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14"]

@@ -69,20 +69,16 @@ def refuse_existing(path: Path) -> None:
 
 
 @contextmanager
-def exporting(
-    file: Path, output: Path | None, suffix: str, beside: tuple[str, ...] = ()
-) -> Iterator[Path]:
+def exporting(file: Path, output: Path | None, suffix: str) -> Iterator[Path]:
     """Report the export of a file while the block writes it, yielding where it goes.
 
     Args:
         file: The game file to export.
         output: The file or folder to write, or None for the one output_path names.
         suffix: The suffix of that default, empty for a folder.
-        beside: The suffixes of the files the export also writes next to the output.
     """
     output = output or output_path(file, suffix)
-    for path in (output, *(output.with_suffix(other) for other in beside)):
-        refuse_existing(path)
+    refuse_existing(output)
     with working(f"Exporting {file}"):
         yield output
     done(f"Exported {file} to {output}")
@@ -150,7 +146,6 @@ def add_commands[M](
     import_: Callable[[Path], M],
     export_help: str,
     import_help: str,
-    beside: tuple[str, ...] = (),
 ) -> None:
     """Add the commands between files of suffix and their editable form.
 
@@ -164,7 +159,6 @@ def add_commands[M](
         import_: Read a decoded game file from its editable form at a path.
         export_help: The help of the export command.
         import_help: The help of the import command.
-        beside: The suffixes of the files the export also writes next to the editable file.
     """
     folder = not editable_suffix
 
@@ -177,7 +171,7 @@ def add_commands[M](
             output_argument(f"The {_editable(editable_suffix, new=True)} to write", folder=folder),
         ] = None,
     ) -> None:
-        with exporting(file, output, editable_suffix, beside) as target:
+        with exporting(file, output, editable_suffix) as target:
             export(decode(file.read_bytes()), target)
 
     add_import_command(
