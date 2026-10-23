@@ -149,6 +149,21 @@ def test_exports_can_name_the_codes_as_an_earlier_export_did(tmp_path: Path) -> 
     assert "Ś" in (tmp_path / "again" / "text.xlf").read_text(encoding="utf-8")
 
 
+def test_resource_exports_can_save_each_glyph_as_its_own_image(tmp_path: Path) -> None:
+    (tmp_path / "english.raw").write_bytes(mg1_file())
+    runner = CliRunner()
+
+    export = runner.invoke(app, ["resource", "export", str(tmp_path / "english.raw"), "-s"])
+    (tmp_path / "english.raw").unlink()
+    import_ = runner.invoke(app, ["resource", "import", str(tmp_path / "english")])
+
+    assert export.exit_code == 0, export.output
+    assert (tmp_path / "english/font/page0/U+0041.png").is_file()
+    assert not (tmp_path / "english/font/page0.png").exists()
+    assert import_.exit_code == 0, import_.output
+    assert (tmp_path / "english.raw").read_bytes() == mg1_file()
+
+
 def test_errors_end_the_command_with_a_message_and_write_nothing(
     tmp_path: Path,
 ) -> None:

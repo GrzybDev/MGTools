@@ -7,11 +7,11 @@ from lxml import etree
 from PIL import Image
 from translate.storage.pypo import pofile
 
-from mgtools.bitmap import pack_2bpp
+from mgtools.bitmap import grey_image, pack_2bpp
 from mgtools.errors import FormatError
 from mgtools.fileio import read_json
 from mgtools.msx.charset import PLACEHOLDERS
-from mgtools.msx.font import Font, Glyph, decode_font, encode_font
+from mgtools.msx.font import DoubleByteGlyph, Font, Glyph, decode_font, encode_font
 from mgtools.msx.game import Game
 from mgtools.msx.text import export_text_and_font, import_text_and_font
 from mgtools.translation import TranslationFormat, import_units
@@ -195,6 +195,33 @@ def test_characters_added_to_page_4_can_be_used_by_translations(
     assert decode_font(pages).double_byte[2].code == 0x8175
 
 
+def test_glyphs_added_as_images_of_their_own_can_be_used_by_translations(
+    tmp_path: Path,
+) -> None:
+    export_text_and_font(
+        Game.MG1, MG1_BLOCKS, PAGES, tmp_path, TranslationFormat.PO, separate_glyphs=True
+    )
+
+    def add_glyphs(document: dict[str, Any]) -> None:
+        document["charmap"]["A0"] = "ą"
+        document["pages"][0]["widths"]["A0"] = 3
+        document["pages"][0]["images"]["A0"] = "a-ogonek.png"
+        document["double_byte"].append("「")
+        document["double_byte_images"].append("corner-bracket.png")
+
+    edit_json(tmp_path / "font.json", add_glyphs)
+    grey_image(b"\3" * 72, (3, 24)).save(tmp_path / "font/page0/a-ogonek.png")
+    grey_image(b"\2" * 576, (24, 24)).save(tmp_path / "font/page4/corner-bracket.png")
+    translate(tmp_path, {"mg1.b03.e000": "「Ząb"})
+
+    blocks, pages = import_text_and_font(Game.MG1, tmp_path)
+
+    font = decode_font(pages)
+    assert blocks[3] == strings([(0, b"\x81\x75Z\xa0b"), (1, b"Phew, safe!")])
+    assert font.pages[0].glyphs[0xA0] == Glyph(3, pack_2bpp(b"\3" * 72))
+    assert font.double_byte[2] == DoubleByteGlyph(0x8175, pack_2bpp(b"\2" * 576))
+
+
 @pytest.mark.parametrize(
     ("unit_id", "text", "message"),
     [
@@ -204,13 +231,13 @@ def test_characters_added_to_page_4_can_be_used_by_translations(
             "mg1.b03.e000",
             "Ï",
             r"mg1\.b03\.e000: 'Ï' \(C7\) has no glyph on font page 0: give it a "
-            r"width on page 0 of font\.json and draw it in font/page0\.png",
+            r"width on page 0 of font\.json and draw its glyph",
         ),
         (
             "mg1.b03.e000",
             "「",
             r"mg1\.b03\.e000: '「' has no glyph on font page 4: list it in the "
-            r"double_byte of font\.json and draw it in font/page4\.png",
+            r"double_byte of font\.json and draw its glyph",
         ),
         (
             "mg1.b15.e003",

@@ -50,8 +50,9 @@ def changed(text: str) -> str:
     )
 
 
+@pytest.mark.parametrize("separate_glyphs", [False, True], ids=["page images", "glyph images"])
 def test_every_text_and_font_imports_back_byte_for_byte(
-    resource_files: list[Path], subtests: pytest.Subtests, tmp_path: Path
+    resource_files: list[Path], separate_glyphs: bool, subtests: pytest.Subtests, tmp_path: Path
 ) -> None:
     for index, path in enumerate(resource_files):
         with subtests.test(path.as_posix()):
@@ -59,7 +60,9 @@ def test_every_text_and_font_imports_back_byte_for_byte(
             for fmt in TranslationFormat:
                 directory = tmp_path / f"{index}-{fmt}"
 
-                export_text_and_font(game, blocks, pages, directory, fmt)
+                export_text_and_font(
+                    game, blocks, pages, directory, fmt, separate_glyphs=separate_glyphs
+                )
 
                 assert import_text_and_font(game, directory) == (blocks, pages)
 

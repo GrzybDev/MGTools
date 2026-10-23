@@ -63,6 +63,8 @@ def export_text_and_font(
     directory: Path,
     fmt: TranslationFormat,
     charmap: Charmap | None = None,
+    *,
+    separate_glyphs: bool = False,
 ) -> None:
     """Write a text section for translation tools and a font section as images.
 
@@ -73,6 +75,7 @@ def export_text_and_font(
         directory: The folder to write to.
         fmt: The format of the text for translation tools.
         charmap: The characters of the single-byte codes, None for those of the release.
+        separate_glyphs: Whether to save each glyph as its own image instead of a PNG per page.
     """
     if len(text_blocks) != _BLOCK_COUNTS[game]:
         msg = f"The {game} text has {_BLOCK_COUNTS[game]} blocks, not {len(text_blocks)}"
@@ -111,7 +114,7 @@ def export_text_and_font(
     )
     write_atomically(directory / f"{_TEXTS}{fmt.suffix}", document)
     write_json(directory / _LAYOUT, layout)
-    export_font(_with_default_code(font, used), charset, directory)
+    export_font(_with_default_code(font, used), charset, directory, separate_glyphs=separate_glyphs)
 
 
 def import_text_and_font(game: Game, directory: Path) -> tuple[list[bytes], list[bytes]]:

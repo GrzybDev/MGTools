@@ -57,11 +57,19 @@ def export_command(
             dir_okay=False,
         ),
     ] = None,
+    separate_glyphs: Annotated[
+        bool,
+        typer.Option(
+            "--separate-glyphs",
+            "-s",
+            help="Save each glyph of the font as its own image instead of an image per page",
+        ),
+    ] = False,
 ) -> None:
     """Export a resource file as PNG images, JSON, its texts for translation tools and its undecoded data as .bin files."""  # noqa: E501 - Typer keeps a docstring's line breaks in its list of commands
     names = read_charmap(charmap) if charmap else None
     with exporting(file, output, "") as target:
-        export_resource(file.read_bytes(), target, fmt, names)
+        export_resource(file.read_bytes(), target, fmt, names, separate_glyphs=separate_glyphs)
 
 
 add_import_command(

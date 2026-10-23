@@ -194,12 +194,12 @@ def display_problems(
         elif len(raw) == 2 and raw[0] >= 0x80 and int.from_bytes(raw) not in glyphs:
             yield (
                 f"{text!r} has no glyph on font page 4: list it in the double_byte "
-                "of font.json and draw it in font/page4.png"
+                "of font.json and draw its glyph"
             )
         elif len(raw) == 1 and raw[0] >= 0x20 and raw[0] not in font.pages[0].glyphs:
             yield (
                 f"{text!r} ({raw[0]:02X}) has no glyph on font page 0: give it a "
-                "width on page 0 of font.json and draw it in font/page0.png"
+                "width on page 0 of font.json and draw its glyph"
             )
         if raw == b"\\" and game is Game.MG2:
             yield "{x:5C} starts no engine code, which hangs the game"

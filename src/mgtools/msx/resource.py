@@ -80,6 +80,8 @@ def export_resource(
     directory: Path,
     fmt: TranslationFormat,
     charmap: Charmap | None = None,
+    *,
+    separate_glyphs: bool = False,
 ) -> None:
     """Export a resource file to a new or empty folder, its text in a format.
 
@@ -88,6 +90,8 @@ def export_resource(
         directory: The new or empty folder to write to.
         fmt: The format of the text for translation tools.
         charmap: The characters of the single-byte codes, None for those of the release.
+        separate_glyphs: Whether to save each font glyph as its own image instead of a PNG
+            per page.
     """
     layout, root = _open(data)
     # Import takes every file it finds, so files of another export would end up
@@ -106,7 +110,15 @@ def export_resource(
         return children
 
     text, font = section(layout.text), section(layout.font)
-    export_text_and_font(layout.game, [*text.values()], [*font.values()], directory, fmt, charmap)
+    export_text_and_font(
+        layout.game,
+        [*text.values()],
+        [*font.values()],
+        directory,
+        fmt,
+        charmap,
+        separate_glyphs=separate_glyphs,
+    )
     palettes = []
     for position, palette in section(layout.palettes).items():
         with located(position_name(position)):
