@@ -8,7 +8,7 @@ from mgtools.errors import FormatError
 
 # XML 1.0 has no place for other control characters, for U+FFFE and U+FFFF or for
 # lone surrogates; PO is held to the same set so that every format takes any unit.
-_NOT_CARRIED = re.compile("[^\t\n\r -\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
+_NOT_CARRIED = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
 _ID = re.compile(r"[A-Za-z0-9._:-]+")
 _PRIVATE_USE = re.compile("[\ue000-\uf8ff]")
 
